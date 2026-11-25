@@ -30,7 +30,7 @@ deliberate Reveal.
 
 ## How it is built
 
-![HuntCraft architecture: manuals are written offline with a local generator and review page, published through a build gate to Cloudflare Pages, and a Request a hunt form posts to a Cloudflare Worker that stores requests in D1 and sends one email](images/architecture.png)
+![How a manual gets from the author to a member: a local generator reads the Cyber Range MCP, a local review page signs off each flag, the build stops anything live or uncleared, Cloudflare Pages serves a plain page, the member hunts in Defender, and the Request a hunt form posts to a Worker that saves the request and sends one email](images/architecture.png)
 
 - **Writing a manual (offline).** `tools/generate.py` drafts a manual with Claude, limited to the Cyber Range MCP's
   read-only log-search tools. `tools/review.py` is a local review page: every query is re-run, every field is checked
@@ -84,7 +84,6 @@ Members can request the next hunt at https://huntcraft.kenmwara.com/request.
 | Review and publish | `python tools/review.py`, then open http://127.0.0.1:8770 |
 | Checks | `python tools/generate.py --selftest` and `python tools/review.py --selftest` |
 
-Diagram sources: `images/flow.drawio`; the architecture, scorecard and screenshot frame are rendered from the
-author's shared design templates.
+Diagram sources: `images/flow.drawio` and `images/architecture.drawio`.
 
 </details>
