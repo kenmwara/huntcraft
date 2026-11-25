@@ -84,6 +84,6 @@ Members can request the next hunt at https://huntcraft.kenmwara.com/request.
 | Review and publish | `python tools/review.py`, then open http://127.0.0.1:8770 |
 | Checks | `python tools/generate.py --selftest` and `python tools/review.py --selftest` |
 
-Diagram sources: `images/flow.drawio` and `images/architecture.drawio`.
+Diagram source: `images/flow.drawio`.
 
 </details>
