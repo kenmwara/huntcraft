@@ -1,0 +1,1 @@
+{"answer": "slflare", "why": "This account carried both the failed burst and the successful RDP logon from 159.26.106.84. Valid credentials in an attacker's hands (MITRE T1078) are harder to catch than malware, because every action afterwards looks like a legitimate user."}

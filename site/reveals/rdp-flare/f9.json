@@ -1,0 +1,1 @@
+{"answer": "185.92.220.87:8081", "why": "curl tried to POST backup_sync.zip to http://185.92.220.87:8081/upload and failed. Note it is the SAME host as the C2 but a different port, exfil over the C2 channel (MITRE T1041)."}

@@ -1,0 +1,1 @@
+{"answer": "systeminfo, tasklist", "why": "systeminfo fingerprints the OS, build and hardware; tasklist enumerates running processes and services. Both are host identity, not network or accounts (MITRE T1082)."}

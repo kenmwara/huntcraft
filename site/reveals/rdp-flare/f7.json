@@ -1,0 +1,1 @@
+{"answer": "backup_sync.zip", "why": "Created by powershell in the user's Temp folder right after the discovery burst, named to blend in. Staging collected data in an archive is MITRE T1560."}

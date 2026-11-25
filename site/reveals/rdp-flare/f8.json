@@ -1,0 +1,1 @@
+{"answer": "185.92.220.87", "why": "The only destination the payload itself contacted, at 19:39:03, right as it ran. Using a network protocol to reach an attacker-controlled host is MITRE T1071."}

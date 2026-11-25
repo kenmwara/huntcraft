@@ -1,0 +1,23 @@
+name = "huntcraft-api"
+main = "src/index.js"
+compatibility_date = "2026-06-01"
+workers_dev = false
+
+[observability]
+enabled = true   # keeps console.log (e.g. "notify failed") in Workers Logs
+routes = [{ pattern = "huntcraft.kenmwara.com/api/*", zone_name = "kenmwara.com" }]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "huntcraft-requests"
+database_id = "24874361-4495-4bc8-aa38-a225dc5b8a79"
+
+[[kv_namespaces]]
+binding = "RL"
+id = "e0562e364ead420c8beb0cde2b78fdfe"
+
+# recipient comes from the NOTIFY_TO secret, never from this public file
+[[send_email]]
+name = "EMAIL"
+
+# secrets (wrangler secret put): TURNSTILE_SECRET, NOTIFY_TO

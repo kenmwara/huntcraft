@@ -1,0 +1,1 @@
+{"answer": "MSUpdateService", "why": "A Windows service masquerading as 'Microsoft Update Service', auto-start, running mscloudsync.ps1 from C:\\ProgramData. Registering a service for persistence is MITRE T1543.003; the fake-update naming is the camouflage."}

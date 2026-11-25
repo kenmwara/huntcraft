@@ -1,0 +1,330 @@
+{
+ "hunt": "rdp-flare",
+ "title": "RDP-Flare (Practice)",
+ "mode": "instruction-manual",
+ "note": "This leads you to each flag. Run the queries yourself in the hunt's workspace (the Open in Defender button), follow what to look for, and you will see the answer in your own results before you ever reveal it.",
+ "workspace": "LAW-HuntPractice (ee718ed3-9e76-4b9d-a7b5-3500446fe4f4)",
+ "orientation": {
+  "title": "Before any flag: get your bearings",
+  "why": "You never start by querying for the answer. You start by learning the ground: which tables hold data, over what time window, and for which host. Thirty seconds here saves you from guessing later.",
+  "do": "Run this. It tells you what telemetry exists and how much.",
+  "query": "union withsource=T RdpFlarePractice*_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| summarize Events=count(), FirstEvent=min(Timestamp), LastEvent=max(Timestamp), LoadedAt=max(TimeGenerated), Hosts=make_set(DeviceName) by T",
+  "look_for": "4 rows, one per table: Logon (260 events), Process (1,799), Network (1,377) and File (4,768), all from one host, slflarewinsysmo. Now compare the two clocks. FirstEvent and LastEvent come from Timestamp, the real event time: 16 to 18 Sep 2025. LoadedAt comes from TimeGenerated: 29 Oct 2026 on every table, the day the lab loaded the logs. That is why every query here filters and sorts on Timestamp.",
+  "gotcha": "Every row's TimeGenerated is the same (the moment the lab loaded the logs, 29 Oct 2026). The REAL attack time is in the Timestamp column, so sort and filter on Timestamp. Each query starts with a TimeGenerated line so the portal's time picker (Defender defaults to 7 days) can't hide the rows. Every time in this manual is UTC, but Defender shows your local time until you switch it, so set Defender to UTC before you start."
+ },
+ "flags": [
+  {
+   "section": "1 Initial Access",
+   "flag": "Q1 - The Successful Break-In",
+   "points": 75,
+   "objective": "Several external IPs have been hammering this box's RDP. Find the one that failed a lot and then actually got in.",
+   "where_to_look": {
+    "decision": "Go to the Logon table (RdpFlarePracticeLogon_CL).",
+    "why_here": "A break-in is an authentication event: who signed in, from where, success or failure. That is logon telemetry. It is not in the Process table (that is what ran AFTER access) or the Network table (connections, not logons). The hunt briefing itself points you here, which is a good habit: read what the hunt hands you.",
+    "why_not_others": "You could jump straight to Process to find malware, but you would be guessing which host activity is the attacker before you even know which account they used. Establish the entry first; everything else pivots off it."
+   },
+   "steps": [
+    {
+     "think": "Do not filter for the answer yet, you do not know the IP or the account. Instead get the whole logon picture in one view: group by action, logon type, account and source IP, and count. An overview shows you the pattern; a narrow filter hides it.",
+     "query": "RdpFlarePracticeLogon_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| summarize Attempts=count(), First=min(Timestamp), Last=max(Timestamp) by ActionType, LogonType, AccountName, RemoteIP\n| order by Attempts desc",
+     "run_it": "Run this in the workspace.",
+     "look_for": "Two columns carry the whole story. LogonType: 'Network' is a remote credential check (where brute force shows up), 'RemoteInteractive' is an actual RDP desktop session. ActionType: LogonFailed vs LogonSuccess. Scan the external IPs for one that has a long run of LogonFailed AND then a LogonSuccess. In Defender this returns 113 rows, sorted by attempts.",
+     "observe": "Most source IPs only ever fail, they never got in. Your eye is hunting for the single IP that failed repeatedly on one account and then succeeded on it. Also notice the 'accounts' named dwm-1, umfd-0 and similar: those are Windows internals, not people. Learn to skip them."
+    },
+    {
+     "think": "You have probably already spotted it. Confirm it the strict way: show only the successful RemoteInteractive (real RDP) logons from an external address. If one IP and one account survive this filter, that is your break-in.",
+     "query": "RdpFlarePracticeLogon_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where LogonType == \"RemoteInteractive\" and ActionType == \"LogonSuccess\"\n| where RemoteIP !startswith \"10.\" and RemoteIP !startswith \"192.168.\"\n| project Timestamp, RemoteIP, AccountName\n| order by Timestamp asc",
+     "run_it": "Run it.",
+     "look_for": "3 rows. Two have an empty RemoteIP (sessions on the box itself); only one carries an external address. Note that row's address and its time. That time should read 18:43 on 16 Sep 2025; if it shows any other hour, Defender is still on your local time (Get your bearings, step 2).",
+     "observe": "This is the moment of the break-in. You are now looking straight at the attacker's source address. You found it by reasoning, not by being told."
+    }
+   ],
+   "reveal": {
+    "type": "input",
+    "format": "xxx.xxx.xxx.xxx",
+    "answer": "159.26.106.84",
+    "why": "It ran a burst of failed RDP logons against the account, then landed a RemoteInteractive success, the classic brute-force-then-in pattern (MITRE T1110). The IP is trivially changed by the attacker, but that failure-then-success behaviour is a far stronger signal than the address itself."
+   },
+   "mitre": "T1110 Brute Force"
+  },
+  {
+   "section": "1 Initial Access",
+   "flag": "Q2 - The Account Used",
+   "points": 50,
+   "objective": "Name the real account the attacker signed in with.",
+   "where_to_look": {
+    "decision": "Same Logon table, but now you have a lever: the attacker IP from Q1.",
+    "why_here": "You are not searching blind any more. The account is simply whoever that IP successfully logged in as. This is the heart of pivoting: an answer you already have (the IP) becomes the filter for the next one.",
+    "why_not_others": "You do not need a new data source. Beginners often go hunting somewhere new for each flag; the efficient move is to re-use what you already proved."
+   },
+   "steps": [
+    {
+     "think": "Filter the logon table to the attacker's IP and successful logons. Whatever account name comes back is the compromised identity. You can even read it off the Q1 overview without a new query, but filtering makes it unambiguous.",
+     "query": "RdpFlarePracticeLogon_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where RemoteIP == \"159.26.106.84\" and ActionType == \"LogonSuccess\"\n| distinct AccountName, LogonType",
+     "run_it": "Run it.",
+     "look_for": "3 rows: one account name, seen across three logon types (Network, RemoteInteractive, Unlock).",
+     "observe": "One real username. Note it is an ordinary account, not Guest or anonymous, which is why the next sections matter: the attacker now has a legitimate identity to act under."
+    }
+   ],
+   "reveal": {
+    "type": "input",
+    "format": "username",
+    "answer": "slflare",
+    "why": "This account carried both the failed burst and the successful RDP logon from 159.26.106.84. Valid credentials in an attacker's hands (MITRE T1078) are harder to catch than malware, because every action afterwards looks like a legitimate user."
+   },
+   "mitre": "T1078 Valid Accounts"
+  },
+  {
+   "section": "1 Initial Access",
+   "flag": "Q3 - RDP Hardening Control",
+   "points": 100,
+   "objective": "Name the Windows feature that, if it had been on, would have blocked this brute force at the network layer, before the login screen ever appeared.",
+   "where_to_look": {
+    "decision": "This one is NOT in the logs. It is a knowledge and remediation flag.",
+    "why_here": "Not every flag is a query. Some test whether you understand the control that closes the gap you just found. The question itself is the clue: a feature that forces authentication 'at the network level before a full remote desktop session is established.'",
+    "why_not_others": "Do not waste time querying, there is no row that says 'the fix is X.' Reason from how RDP works: without pre-session authentication, anyone hitting port 3389 gets a login screen to spray against; with it, the handshake happens first and failed attempts never reach a session."
+   },
+   "steps": [
+    {
+     "think": "Walk the candidates. Account Lockout slows spraying but does not act 'at the network level before a session'. A firewall rule blocks the port entirely, it is not an authentication feature. BitLocker is disk encryption, unrelated. That leaves one choice: the feature that makes the client prove who it is (via CredSSP) before Windows ever builds a desktop session. Pick the choice that matches that description.",
+     "query": "(no query, reason it out)",
+     "run_it": "Pick from the choices.",
+     "look_for": "The control that matches 'authenticate at the network level before the session'.",
+     "observe": "Mapping a finding to its specific control is exactly what a report's Detection and Gaps sections reward. You are not just finding the attack, you are naming the fix."
+    }
+   ],
+   "reveal": {
+    "type": "multiple_choice",
+    "choices": [
+     "Network Level Authentication",
+     "Account Lockout Policy",
+     "Windows Firewall rule",
+     "BitLocker"
+    ],
+    "answer": "Network Level Authentication",
+    "why": "NLA requires the client to complete authentication (via CredSSP) before the RDP session is created, so sprayed passwords are rejected at the network layer and never reach the login UI. It would not stop a correct password on its own, but with account lockout it sharply raises the cost of brute force. CIS and Microsoft baselines recommend it on every RDP-exposed host."
+   },
+   "mitre": "T1110 Brute Force (mitigation)"
+  },
+  {
+   "section": "2 Execution",
+   "flag": "Q1 - What They Ran",
+   "points": 75,
+   "objective": "About an hour after getting in, the attacker ran the real payload (not the calc.exe decoy). Name the binary.",
+   "where_to_look": {
+    "decision": "Go to the Process table (RdpFlarePracticeProcess_CL).",
+    "why_here": "'What ran' is literally a process-creation event. Now that you know the account (slflare) from Section 1, you follow that account's activity here.",
+    "why_not_others": "Logon got the attacker in; it cannot tell you what they executed. That is a different table, and the pivot is the account you already proved."
+   },
+   "steps": [
+    {
+     "think": "Do not dump every process, a live Windows box runs thousands of normal ones. Cut the noise deliberately: filter to the attacker's account, the window after the login, and exclude the standard Windows / OneDrive / Brave paths. Legit system binaries live under C:\\Windows; a dropped payload usually does not, so what remains is suspicious by location.",
+     "query": "RdpFlarePracticeProcess_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where Timestamp > datetime(2025-09-16 19:20) and AccountName =~ \"slflare\"\n| where FolderPath !startswith \"C:\\\\Windows\" and FolderPath !has \"OneDrive\" and FolderPath !has \"BraveSoftware\"\n| project Timestamp, FileName, FolderPath, ProcessCommandLine\n| order by Timestamp asc",
+     "run_it": "Run it.",
+     "look_for": "An executable running from a user-writable path (C:\\Users\\Public, Temp, ProgramData) rather than C:\\Windows. That is where attackers stage tools.",
+     "observe": "This query starts at 19:20 UTC, after the cmd.exe /c calc.exe decoy the flag warns about, so the decoy is not in these results. Of the 4 rows, two DismHost.exe runs from a GUID folder in Temp are Windows servicing and PhoneExperienceHost.exe is the Phone Link app. One row is left."
+    }
+   ],
+   "reveal": {
+    "type": "input",
+    "format": "filename",
+    "answer": "msupdate.exe",
+    "why": "A PowerShell downloader wrapper masquerading as a Microsoft update, run from a world-writable path about an hour after login. The one-hour gap suggests a hands-on operator, not automation (MITRE T1059.001)."
+   },
+   "mitre": "T1059.001 PowerShell"
+  },
+  {
+   "section": "2 Execution",
+   "flag": "Q2 - How It Was Launched",
+   "points": 75,
+   "objective": "Get the exact command line that launched the payload, full path and arguments.",
+   "where_to_look": {
+    "decision": "Same Process table, now zoomed to that single process.",
+    "why_here": "The ProcessCommandLine field holds the literal invocation, exactly as it was typed/scripted.",
+    "why_not_others": "Nothing new to find; you are reading one field off the row you already located."
+   },
+   "steps": [
+    {
+     "think": "You have the binary. Pull its row and read ProcessCommandLine verbatim. The flag wants it exactly, including the switches, so copy what the data shows, do not paraphrase.",
+     "query": "RdpFlarePracticeProcess_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where FileName =~ \"msupdate.exe\"\n| project Timestamp, ProcessCommandLine",
+     "run_it": "Run it.",
+     "look_for": "1 row. Read the full command string: its flags and the script path it runs.",
+     "observe": "The '-ExecutionPolicy Bypass' flag is the real tell: it survives even if the attacker renames the binary, so a good detection targets that behaviour, not the file name."
+    }
+   ],
+   "reveal": {
+    "type": "input",
+    "format": "the full command line",
+    "answer": "\"msupdate.exe\" -ExecutionPolicy Bypass -File C:\\Users\\Public\\update_check.ps1",
+    "why": "The wrapper runs a PowerShell script from C:\\Users\\Public with execution policy bypassed, a classic script-execution technique (T1059.001). The staging path and the Bypass flag are both behavioural indicators."
+   },
+   "mitre": "T1059.001 PowerShell"
+  },
+  {
+   "section": "3 Persistence",
+   "flag": "Q1 - Staying In",
+   "points": 125,
+   "objective": "The attacker did not want to re-break-in every time. They registered something to survive a reboot. Name it (and do not assume it is a scheduled task).",
+   "where_to_look": {
+    "decision": "Back to the Process table.",
+    "why_here": "Persistence is SET UP by running a command: sc create (a service), schtasks (a task), reg add (a run key), net user (an account). This hunt has no Registry table, so the command that created the persistence is your evidence, and it lives in Process.",
+    "why_not_others": "You might reach for a dedicated persistence or registry table. You do not have one here, so hunt the command instead of the artefact."
+   },
+   "steps": [
+    {
+     "think": "Search the attacker's process activity for the handful of commands that create persistence. The question steers you off scheduled tasks, so watch especially for a new service (sc.exe create).",
+     "query": "RdpFlarePracticeProcess_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where Timestamp between (datetime(2025-09-16 18:40) .. datetime(2025-09-18 23:59))\n| where ProcessCommandLine has_any (\"sc create\",\"sc.exe\",\"schtasks\",\"reg add\",\"New-Service\",\"net user\")\n| project Timestamp, AccountName, FileName, ProcessCommandLine\n| order by Timestamp asc",
+     "run_it": "Run it.",
+     "look_for": "37 rows, most from SYSTEM. The attacker's rows sit together at 19:39:45 UTC. Find the sc.exe create line that makes a new service, and read its name and the binPath it will run.",
+     "observe": "The new service's binPath is a PowerShell script, and the display name is dressed up to look like a Windows update. Also notice the repeating 'net user guest ...' lines from SYSTEM/wmiprvse every ~10 minutes: that is lab noise, not the attacker. Telling one real event from repeating automation is a core hunting skill."
+    }
+   ],
+   "reveal": {
+    "type": "input",
+    "format": "service name",
+    "answer": "MSUpdateService",
+    "why": "A Windows service masquerading as 'Microsoft Update Service', auto-start, running mscloudsync.ps1 from C:\\ProgramData. Registering a service for persistence is MITRE T1543.003; the fake-update naming is the camouflage."
+   },
+   "mitre": "T1543.003 Windows Service"
+  },
+  {
+   "section": "4 Discovery",
+   "flag": "Q1 - Mapping the Host",
+   "points": 75,
+   "objective": "Right after persistence, the attacker ran a burst of discovery commands. Name the two that are about the HOST itself: basic fingerprinting, not network and not accounts.",
+   "where_to_look": {
+    "decision": "Process table, the burst of commands just after the persistence step.",
+    "why_here": "Discovery is the attacker running built-in commands to learn the box. Those are process executions.",
+    "why_not_others": "No new source needed; you are reading the same account's activity in a tight time window."
+   },
+   "steps": [
+    {
+     "think": "Don't search for command names: you'd only find the ones you already thought of. The persistence step (the service creation) happened at about 19:39:45 on 16 Sept. Attackers usually look around right after landing a foothold, so pull EVERYTHING the attacker's account ran in the next few minutes and read it in order.",
+     "query": "RdpFlarePracticeProcess_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where AccountName =~ \"slflare\"\n| where Timestamp between (datetime(2025-09-16 19:40) .. datetime(2025-09-16 19:41))\n| project Timestamp, FileName, ProcessCommandLine\n| order by Timestamp asc",
+     "run_it": "Run it.",
+     "look_for": "21 rows inside 16 seconds (19:40:28 to 19:40:44 UTC). Each tool shows up twice: once as the cmd.exe /c wrapper and once as the tool itself. Sort each tool into a bucket: it describes the machine itself (its OS, patches, what's running on it), the network (addresses, connections, domain), or users and sessions. Exactly two land in the machine bucket.",
+     "observe": "Sorting recon into buckets like this is how you summarise an attacker's discovery in a report: it shows what they wanted to learn, not just what they typed."
+    }
+   ],
+   "reveal": {
+    "type": "input",
+    "format": "two commands, comma separated",
+    "answer": "systeminfo, tasklist",
+    "why": "systeminfo fingerprints the OS, build and hardware; tasklist enumerates running processes and services. Both are host identity, not network or accounts (MITRE T1082).",
+    "accept": [
+     "systeminfo, tasklist /svc",
+     "systeminfo.exe, tasklist.exe"
+    ]
+   },
+   "mitre": "T1082 System Information Discovery"
+  },
+  {
+   "section": "5 Collection",
+   "flag": "Q1 - Packaged for Theft",
+   "points": 75,
+   "objective": "Something got zipped up and staged locally, in the attacker's temp directory, with a name made to look routine. Name the archive.",
+   "where_to_look": {
+    "decision": "Go to the File table (RdpFlarePracticeFile_CL).",
+    "why_here": "An archive being created is a file event: a new .zip appearing on disk. The File table shows the artefact directly, with the path and the process that made it.",
+    "why_not_others": "You could grep Process for a zip command, but the File table hands you the file itself, which is cleaner."
+   },
+   "steps": [
+    {
+     "think": "List archive files created during the incident, then read their paths. Several will be benign (Windows, Edge, the VM agent). The flag gives you two discriminators: it is in a TEMP directory and the name looks routine, so match those.",
+     "query": "RdpFlarePracticeFile_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where FileName endswith \".zip\" or FileName endswith \".7z\" or FileName endswith \".rar\"\n| summarize Actions=make_set(ActionType), First=min(Timestamp) by FileName, FolderPath, InitiatingProcessFileName\n| order by First asc",
+     "run_it": "Run it.",
+     "look_for": "13 rows. An archive in a user Temp path, created by powershell, with an innocuous name. Benign ones sit in Program Files or D:\\CollectGuestLogs and the like.",
+     "observe": "You will also see C:\\ProgramData\\backup\\employee-data-*.zip files, but those are the persistence service's later runs in a different path, not this flag. Match the clue: temp directory plus a routine-looking name."
+    }
+   ],
+   "reveal": {
+    "type": "input",
+    "format": "filename",
+    "answer": "backup_sync.zip",
+    "why": "Created by powershell in the user's Temp folder right after the discovery burst, named to blend in. Staging collected data in an archive is MITRE T1560."
+   },
+   "mitre": "T1560 Archive Collected Data"
+  },
+  {
+   "section": "6 Command and Control",
+   "flag": "Q1 - Phoning Home",
+   "points": 100,
+   "objective": "The payload you found in the Execution section (msupdate.exe) did not run in a vacuum. It called out somewhere. Give that destination.",
+   "where_to_look": {
+    "decision": "Go to the Network table (RdpFlarePracticeNetwork_CL).",
+    "why_here": "A callout is an outbound network connection. The flag ties it to a specific process, so filter the network events by that initiating process rather than reading them all.",
+    "why_not_others": "The box talks to many Microsoft endpoints; filtering by the process that made the connection is what keeps you from blaming legitimate traffic."
+   },
+   "steps": [
+    {
+     "think": "Filter network events to connections initiated by msupdate.exe (and the attacker's powershell). Whatever external IP that payload contacted is the C2. Summarising by RemoteIP/RemoteUrl keeps it readable.",
+     "query": "RdpFlarePracticeNetwork_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where InitiatingProcessFileName in~ (\"msupdate.exe\",\"powershell.exe\")\n| summarize Hits=count(), First=min(Timestamp) by RemoteIP, RemoteUrl, InitiatingProcessFileName\n| order by First asc",
+     "run_it": "Run it.",
+     "look_for": "9 rows. The external IP whose InitiatingProcessFileName is msupdate.exe. Separate the noise: edr-*.microsoft.com is Defender telemetry, raw.githubusercontent.com is script hosting, *.blob.core.windows.net is storage.",
+     "observe": "Only one destination has msupdate.exe as the initiator. Attributing a connection to the exact process that made it is how you pick the C2 out of ordinary traffic."
+    }
+   ],
+   "reveal": {
+    "type": "input",
+    "format": "IP or domain",
+    "answer": "185.92.220.87",
+    "why": "The only destination the payload itself contacted, at 19:39:03, right as it ran. Using a network protocol to reach an attacker-controlled host is MITRE T1071."
+   },
+   "mitre": "T1071 Application Layer Protocol"
+  },
+  {
+   "section": "7 Exfiltration",
+   "flag": "Q1 - The Failed Handoff",
+   "points": 100,
+   "objective": "After staging the archive, the session tried to send it somewhere external. Give the destination as IP:Port. It does not matter that the attempt failed; they want where the attacker aimed.",
+   "where_to_look": {
+    "decision": "Network table again, around the collection time, looking for a failed outbound.",
+    "why_here": "Exfiltration is an outbound connection carrying the data out. A failed attempt still leaves a ConnectionFailed row.",
+    "why_not_others": "Same table as C2, but a different moment (just after the archive was staged) and you care about the port, not just the IP."
+   },
+   "steps": [
+    {
+     "think": "Look at the attacker's network connections right after backup_sync.zip was staged, especially ConnectionFailed ones. The format wants IP:Port, so you need the port, and the port field may be empty.",
+     "query": "RdpFlarePracticeNetwork_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where RemoteIP == \"185.92.220.87\"\n| project Timestamp, RemoteIP, RemotePort, ActionType, InitiatingProcessFileName, InitiatingProcessCommandLine\n| order by Timestamp asc",
+     "run_it": "Run it.",
+     "look_for": "4 rows, every one a ConnectionFailed, and RemotePort is empty on all of them. Check which process made each attempt and read the command line of the one that sent a file.",
+     "observe": "RemotePort may be empty, but a command line that sent the file often spells out the whole URL, port included. When a structured field is blank, the command line usually still carries the fact."
+    }
+   ],
+   "reveal": {
+    "type": "input",
+    "format": "IP:Port",
+    "answer": "185.92.220.87:8081",
+    "why": "curl tried to POST backup_sync.zip to http://185.92.220.87:8081/upload and failed. Note it is the SAME host as the C2 but a different port, exfil over the C2 channel (MITRE T1041)."
+   },
+   "mitre": "T1041 Exfiltration Over C2 Channel"
+  },
+  {
+   "section": "8 Judgement",
+   "flag": "Q1 - Shared Infrastructure",
+   "points": 100,
+   "objective": "185.92.220.87 shows up twice: once as the payload's C2 (port 80) and once as the exfil target (port 8081). Same IP, two different ports, two different purposes. What does that reuse tell you about how this attacker's infrastructure is set up?",
+   "where_to_look": {
+    "decision": "No query. This is a reasoning flag.",
+    "why_here": "The final flag tests whether you can interpret your findings, not find a new one. You already have both facts (the C2 and the exfil target). The question is what they mean together.",
+    "why_not_others": "There is no row that states the conclusion; you synthesise it from what you already proved."
+   },
+   "steps": [
+    {
+     "think": "One host doing two jobs on two ports means the attacker is NOT using separate, dedicated servers for C2 and exfil. It is a single multi-purpose box. Reason about the implications: limited resources or a hasty setup, and, for a defender, a single chokepoint, because blocking that one IP kills both channels at once.",
+     "query": "(no query, synthesise your findings)",
+     "run_it": "Write your reasoning, then reveal a model answer to compare.",
+     "look_for": "The implication, not a new data point.",
+     "observe": "This is the kind of judgment a report's conclusion rewards: not just what happened, but what it tells you about the actor and how to act on it."
+    }
+   ],
+   "reveal": {
+    "type": "input",
+    "format": "one or two sentences of reasoning",
+    "answer": "One server does both jobs, so it is single, multi-purpose infrastructure, not separate dedicated hosts.",
+    "why": "Same IP for C2 (port 80) and exfil (port 8081) means the attacker runs one box for multiple roles rather than segmented infrastructure. That points to a small or hastily-built operation, and it hands defenders a single chokepoint: block 185.92.220.87 and both command-and-control and exfiltration die, while the shared IP ties the whole intrusion to one actor (MITRE T1583)."
+   },
+   "mitre": "T1583 Acquire Infrastructure"
+  }
+ ]
+}

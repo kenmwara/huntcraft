@@ -1,0 +1,27 @@
+{
+  "slug": "rdp-flare",
+  "title": "RDP-Flare (Practice)",
+  "source": "Cyber Range — Threat Hunts (Past Hunt, Practice)",
+  "difficulty": "Easy",
+  "flag_count": 11,
+  "points": 950,
+  "scope": "practice",
+  "workspace": {
+    "name": "LAW-HuntPractice",
+    "guid": "ee718ed3-9e76-4b9d-a7b5-3500446fe4f4"
+  },
+  "host": "slflarewinsysmo",
+  "incident_window_utc": {
+    "start": "2025-09-16T18:34:00Z",
+    "end": "2025-09-18T23:56:00Z"
+  },
+  "tables": [
+    "RdpFlarePracticeProcess_CL",
+    "RdpFlarePracticeNetwork_CL",
+    "RdpFlarePracticeFile_CL",
+    "RdpFlarePracticeLogon_CL"
+  ],
+  "telemetry_note": "Rows carry two clocks: TimeGenerated = bulk load time (all ~2026-10-29 17:37), Timestamp/OriginalTime = the real event time (Sept 2025). Always hunt on Timestamp, not TimeGenerated.",
+  "scenario": "An internet-facing Windows host is brute-forced over RDP; one account falls and the attacker logs in interactively. Post-access actions follow (to be worked flag by flag).",
+  "tenant_id": "939e93f3-04f6-479d-82ff-345c231abb4d"
+}

@@ -1,0 +1,1 @@
+{"answer": "msupdate.exe", "why": "A PowerShell downloader wrapper masquerading as a Microsoft update, run from a world-writable path about an hour after login. The one-hour gap suggests a hands-on operator, not automation (MITRE T1059.001)."}

@@ -1,0 +1,16 @@
+[
+  {
+    "slug": "rdp-flare",
+    "title": "RDP-Flare (Practice)",
+    "link_patterns": [],
+    "workspace": "LAW-HuntPractice",
+    "workspace_guid": "ee718ed3-9e76-4b9d-a7b5-3500446fe4f4",
+    "table_prefix": "RdpFlarePractice",
+    "status": "practice",
+    "owner": "Cyber Range",
+    "clearance": {
+      "date": "2026-11-25",
+      "scope": "public solution publishing"
+    }
+  }
+]

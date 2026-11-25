@@ -1,0 +1,1 @@
+{"answer": "159.26.106.84", "why": "It ran a burst of failed RDP logons against the account, then landed a RemoteInteractive success, the classic brute-force-then-in pattern (MITRE T1110). The IP is trivially changed by the attacker, but that failure-then-success behaviour is a far stronger signal than the address itself."}

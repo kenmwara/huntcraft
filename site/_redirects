@@ -1,0 +1,5 @@
+# old raw-markdown links (before 25 Nov) go to the rendered pages
+/knowledge/method.md /knowledge/method 301
+/knowledge/kql-cookbook.md /knowledge/kql-cookbook 301
+/knowledge/log-tables.md /knowledge/log-tables 301
+/knowledge/report-writing.md /knowledge/report-writing 301

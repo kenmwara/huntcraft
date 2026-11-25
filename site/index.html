@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HuntCraft</title>
+<meta name="description" content="A threat-hunt instruction manual. Follow the reasoning, run the queries yourself, and find each flag on your own.">
+<meta property="og:title" content="HuntCraft">
+<meta property="og:description" content="Follow the reasoning, run the queries yourself, find the flag on your own.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://huntcraft.kenmwara.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://huntcraft.kenmwara.com/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="HuntCraft">
+<meta name="twitter:description" content="Follow the reasoning, run the queries yourself, find the flag on your own.">
+<meta name="twitter:image" content="https://huntcraft.kenmwara.com/og.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f8fafc; --surface:#ffffff; --surface-2:#f1f5f9; --ink:#0f172a; --muted:#475569; --line:#e2e8f0;
+  --accent:#2563eb; --accent-soft:#eff6ff; --good:#15803d; --good-soft:#ecfdf3; --bad:#b91c1c; --bad-soft:#fef2f2;
+  --note-bg:#fffbeb; --note-line:#f59e0b; --note-ink:#78350f;
+  --code-bg:#0f172a; --code-ink:#e2e8f0; --code-key:#93b4ff; --code-pipe:#fbbf24; --code-str:#6ee7b7;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#0b1020; --surface:#111827; --surface-2:#1a2335; --ink:#e5e9f0; --muted:#a3adbf; --line:#263043;
+  --accent:#6b9bff; --accent-soft:#16213a; --good:#4ade80; --good-soft:#0f2418; --bad:#f87171; --bad-soft:#2a1416;
+  --note-bg:#2a2112; --note-line:#d79b2b; --note-ink:#f5d9a3; --code-bg:#070b16;
+}}
+:root[data-theme="dark"]{
+  --bg:#0b1020; --surface:#111827; --surface-2:#1a2335; --ink:#e5e9f0; --muted:#a3adbf; --line:#263043;
+  --accent:#6b9bff; --accent-soft:#16213a; --good:#4ade80; --good-soft:#0f2418; --bad:#f87171; --bad-soft:#2a1416;
+  --note-bg:#2a2112; --note-line:#d79b2b; --note-ink:#f5d9a3; --code-bg:#070b16;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--surface);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.6;
+  font-size:15px;-webkit-font-smoothing:antialiased}
+.wrap{min-height:100vh;display:flex;flex-direction:column}
+a{color:var(--accent)}
+button,select,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{cursor:pointer;min-height:40px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:14px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.link{border:0;background:none;color:var(--accent);padding:8px 4px}
+#theme{width:40px;height:40px;padding:0;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.inlink{border:0;background:none;padding:0;font:inherit;color:var(--accent);text-decoration:underline;cursor:pointer}
+.ground details{margin-top:4px}.ground summary{cursor:pointer;color:var(--accent);width:max-content}.ground details p{margin:6px 0 0}
+.btn.small{min-height:32px;padding:4px 10px;font-size:13px}
+
+/* header */
+header.top{display:flex;align-items:center;gap:12px 24px;flex-wrap:wrap;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--surface)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand svg{width:24px;height:24px}
+.brand b{font-size:18px;letter-spacing:-.02em}
+.hsel,.ws{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.hsel select{min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:6px 10px;font-weight:600;font-size:14px;color:var(--ink);max-width:260px}
+.ws .v{display:flex;align-items:center;gap:8px}
+.ws #ws-name{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;background:var(--surface-2);color:var(--ink);padding:6px 8px;border-radius:6px}
+.spacer{flex:1 1 0}
+.prog{display:flex;align-items:center;gap:10px}
+.prog .bar{width:120px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.prog .bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+.prog .t{font-size:13px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.prog .t b{color:var(--ink)}
+.tools{display:flex;gap:4px;align-items:center}
+.tools #how{font-size:13px}
+
+/* intro */
+.intro{padding:16px 18px;border:1px solid var(--line);border-radius:8px;background:var(--surface);display:flex;gap:12px 16px;align-items:flex-start;flex-wrap:wrap}
+.intro div{flex:1 1 380px}
+.intro h2{margin:0 0 4px;font-size:15px;font-weight:600}
+.intro p{margin:0;color:var(--muted)}
+
+/* shell: header / (rail + main) / footer, full width */
+.layout{flex:1 1 auto;display:flex;align-items:stretch}
+.rail{flex:0 0 280px;background:var(--surface-2);border-right:1px solid var(--line);padding:20px 12px}
+.railbox{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
+main{flex:1 1 auto;min-width:0;background:var(--surface);padding:28px 40px 64px}
+.col{max-width:760px;display:flex;flex-direction:column;gap:24px}
+#content{display:flex;flex-direction:column;gap:24px}
+.fhead{display:flex;flex-direction:column;gap:6px}
+
+.railbox>summary{list-style:none;cursor:pointer;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;padding:6px 0 10px;display:flex;justify-content:space-between}
+.railbox>summary::-webkit-details-marker{display:none}
+.railbox>summary .cur{text-transform:none;letter-spacing:0;color:var(--ink);font-weight:600}
+@media (min-width:861px){ .railbox>summary{pointer-events:none} .railbox>summary .cur{display:none} }
+.rail ol{list-style:none;margin:0;padding:0}
+.tac>button{width:100%;text-align:left;cursor:pointer;display:flex;gap:10px;align-items:center;min-height:40px;padding:6px 10px;border:0;border-radius:8px;background:none;font-weight:600;font-size:14px}
+.tac>button:hover{background:var(--surface-2)}
+.tac .n{flex:none;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:6px;background:var(--surface-2);color:var(--muted);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.tac.active .n{background:var(--accent);color:#fff}
+.tac .c{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500;font-variant-numeric:tabular-nums}
+.flags{margin:2px 0 8px 22px;padding-left:12px;border-left:2px solid var(--line)}
+.flags button{width:100%;text-align:left;cursor:pointer;display:flex;gap:8px;align-items:center;min-height:40px;padding:6px 8px;border:0;border-radius:8px;background:none;font-size:13.5px}
+.flags button:hover{background:var(--surface-2)}
+.flags button[aria-current="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.flags .pts{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.mk{flex:none;width:12px;height:12px;border-radius:50%;border:2px solid var(--line)}
+.mk.solved{background:var(--good);border-color:var(--good)}
+.mk.revealed{border-color:var(--muted)}
+
+/* main pane */
+.ground{display:flex;gap:10px;background:var(--note-bg);border:1px solid var(--note-line);color:var(--note-ink);border-radius:8px;padding:10px 14px;font-size:13px;line-height:1.5}
+.crumb{font-size:13px;color:var(--muted);margin:0}
+h1.ft{font-size:28px;font-weight:700;line-height:1.25;letter-spacing:-.01em;margin:0;text-wrap:balance}
+.fmeta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0;font-size:13px;color:var(--muted)}
+.fmeta .p{font-weight:600;color:var(--accent);font-variant-numeric:tabular-nums}
+.obj{font-size:16px;margin:0;color:var(--ink)}
+ol.stepper{list-style:none;margin:0;padding:0;counter-reset:s}
+.st{position:relative;padding:0 0 4px 40px}
+.st::before{content:"";position:absolute;left:13px;top:30px;bottom:0;width:2px;background:var(--line)}
+.st:last-child::before{display:none}
+.st .dot{position:absolute;left:0;top:4px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--surface-2);color:var(--muted);border:2px solid var(--line);font-variant-numeric:tabular-nums}
+.st.cur .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+.st.done .dot{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.st>h3{margin:0}
+.st>h3 button{cursor:pointer;border:0;background:none;padding:6px 0;min-height:40px;font-size:15px;font-weight:600;text-align:left;color:var(--ink)}
+.st:not(.cur)>h3 button{color:var(--muted)}
+.sbody{padding:2px 0 20px;display:flex;flex-direction:column;gap:10px}
+.sbody p,.sbody ol{margin:0}
+.sbody>.btn{align-self:flex-start}
+.sbody .lab{font-size:13px;color:var(--muted);font-weight:600;margin:4px 0 0}
+.code{border-radius:8px;overflow:hidden;border:1px solid var(--code-bg)}
+.cbar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:6px 8px 6px 14px;background:var(--code-bg);border-bottom:1px solid var(--muted)}
+.cbar .lbl{flex:1 1 auto;font-size:12px;color:var(--code-ink)}
+.cbar .btn{min-height:30px;padding:0 10px;font-size:12px;font-weight:500;border-radius:6px;display:inline-flex;align-items:center;text-decoration:none}
+.cbar .ghost{background:transparent;border-color:var(--muted);color:var(--code-ink)}
+.cbar .ws-copy{display:none}
+.code pre{margin:0;background:var(--code-bg);color:var(--code-ink);padding:14px 16px;white-space:pre-wrap;word-break:break-word;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:13px;line-height:1.6}
+.code pre .k{color:var(--code-key)} .code pre .p{color:var(--code-pipe)} .code pre .s{color:var(--code-str)}
+.hint{padding:10px 14px;border-radius:8px;background:var(--accent-soft);border:1px solid var(--line);font-size:14px}
+.hint p{margin:0 0 6px}.hint p:last-child{margin:0}
+.ans-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ans-row input,.ans-row textarea{flex:1 1 260px;min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:8px 12px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:14px}
+.ans-row textarea{font-family:inherit;min-height:84px}
+fieldset{border:0;margin:0;padding:0}
+.choice{display:flex;gap:10px;align-items:center;min-height:40px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;margin:0 0 6px;cursor:pointer;background:var(--surface)}
+.fb{margin:8px 0;padding:10px 14px;border-radius:8px;font-size:14.5px}
+.fb.ok{background:var(--good-soft);color:var(--good)}
+.fb.no{background:var(--bad-soft);color:var(--bad)}
+.answer{margin:10px 0;padding:12px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface)}
+.answer code{font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:600;word-break:break-word}
+.answer p{margin:6px 0 0}
+.mitre{font-size:13px;color:var(--muted);margin:4px 0 0}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:16px;font-size:14px}
+.pager button{max-width:48%;border:0;background:none;padding:0;min-height:40px;color:var(--accent);cursor:pointer;text-align:left}
+.pager button:hover{text-decoration:underline}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding:8px 24px;display:flex;flex-wrap:wrap;align-items:center;gap:0 20px;background:var(--surface)}
+footer nav{display:flex;gap:0 20px;flex-wrap:wrap}
+footer a{display:inline-flex;align-items:center;min-height:40px;text-decoration:none;font-weight:500}
+footer a:hover{text-decoration:underline;text-underline-offset:3px}
+footer .credit{padding:10px 0}
+
+/* phone */
+@media (max-width:860px){
+  header.top{display:grid;grid-template-columns:1fr auto;gap:10px 12px;padding:12px 16px}
+  .brand{grid-column:1} .tools{grid-column:2;grid-row:1}
+  .hsel{grid-column:1;min-width:0} .hsel label{position:absolute;left:-9999px} .hsel select{flex:1 1 auto;min-width:0;max-width:none}
+  .prog{grid-column:2;grid-row:2}
+  .prog .bar{display:none}
+  .col,#content{gap:16px}
+  .intro{padding:12px 14px} .intro p{font-size:14px;line-height:1.5}
+  h1.ft{font-size:24px}
+  .ws{display:none}
+  .cbar .ws-copy{display:inline-flex}
+  .layout{flex-direction:column}
+  .rail{flex:none;border-right:0;border-bottom:1px solid var(--line);padding:8px 16px}
+  .railbox{position:static;max-height:none}
+  main{padding:20px 16px 48px}
+  footer{padding:8px 16px}
+}
+.rail-req{margin:12px 0 0;padding:12px 10px 0;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.rail-req a{font-weight:600}
+.done{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;justify-content:space-between;padding:16px;border:1px solid var(--line);border-radius:8px;background:var(--good-soft)}
+.done p{margin:0;font-size:15px}
+.done .btn{text-decoration:none;display:inline-flex;align-items:center;color:var(--ink)}
+.ans-row textarea[readonly]{background:var(--surface-2);color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="14" cy="14" r="8" fill="none" stroke="var(--accent)" stroke-width="3"/><line x1="20" y1="20" x2="28.5" y2="28.5" stroke="var(--accent)" stroke-width="3" stroke-linecap="round"/></svg>
+      <b>HuntCraft</b>
+    </div>
+    <div class="hsel"><label for="hunt-select">Hunt</label><select id="hunt-select"></select></div>
+    <div class="ws"><span>Workspace</span><span class="v"><span id="ws-name"></span><button class="btn small" id="copy-ws" type="button">Copy ID</button></span></div>
+    <div class="spacer"></div>
+    <div class="prog" aria-live="polite" aria-label="Your progress"><span class="t" id="ptext"></span><span class="bar"><i id="pbar"></i></span></div>
+    <div class="tools"><button class="btn link" id="how" type="button">How this works</button><button class="btn link" id="theme" type="button" aria-label="Switch theme"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 2a8 8 0 0 1 0 16z" fill="currentColor"/></svg></button></div>
+  </header>
+
+  <div class="layout">
+    <aside class="rail" aria-label="Flags">
+      <details class="railbox" id="railbox" open>
+        <summary><span>Flags</span><span class="cur" id="rail-cur"></span></summary>
+        <ol id="rail"></ol>
+        <p class="rail-req">Want another hunt? <a href="/request">Request one</a></p>
+      </details>
+    </aside>
+    <main id="main"><div class="col">
+      <section class="intro" id="intro" hidden>
+        <div>
+          <h2>New to hunting? This is how it works.</h2>
+          <p>This is a manual, not an answer key. Each flag walks you through where to look and why, then one query at a time. First, set Defender's time zone to UTC (Get your bearings, step 2 shows exactly how): every time in the manual is UTC. Then run each query yourself in Defender and you'll reach the answer on your own. Check your answer when you have one. Reveal is there if you're truly stuck.</p>
+        </div>
+        <button class="btn" id="intro-ok" type="button">Got it</button>
+      </section>
+      <div id="content"></div>
+    </div></main>
+  </div>
+
+  <footer>
+    <nav aria-label="Method references">
+      <a href="/knowledge/method">The hunt method</a>
+      <a href="/knowledge/kql-cookbook">KQL cookbook</a>
+      <a href="/knowledge/log-tables">Log-table reference</a>
+      <a href="/knowledge/report-writing">Report writing</a>
+      <a href="/request">Request a hunt</a>
+    </nav>
+    <span class="spacer"></span>
+    <span class="credit">Practice and solved hunts only, never a live one. Built on the Cyber Range MCP. A teaching project by Ken Kariuki.</span>
+  </footer>
+</div>
+
+<script src="data.js?v=ec779aa9d7"></script>
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  function store(k,v){ try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k,JSON.stringify(v)); }catch(e){ return null; } }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function kql(code){
+    var kw=/\b(where|project|summarize|order by|take|extend|join|distinct|union|count|make_set|min|max|by|has|has_any|startswith|endswith|between|datetime|in|asc|desc|countif|withsource)\b/g;
+    return esc(code).replace(/(&quot;[^&]*?&quot;|'[^']*')/g,'<span class="s">$1</span>').replace(kw,'<span class="k">$&</span>').replace(/\|/g,'<span class="p">|</span>');
+  }
+  // compare answers ignoring case, quotes, spacing and a trailing period; comma order only for list answers
+  // (same rule as norm() in tools/generate.py, which build.py uses to make the check hashes)
+  function norm(s,unordered){ var t=String(s||'').toLowerCase().replace(/["'`]/g,'').replace(/\s+/g,' ').trim().replace(/\.+$/,'');
+    return unordered ? t.split(',').map(function(x){return x.trim();}).filter(Boolean).sort().join(',') : t; }
+  function sha(s){ return crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)).then(function(b){
+    return Array.prototype.map.call(new Uint8Array(b),function(x){ return ('0'+x.toString(16)).slice(-2); }).join(''); }); }
+  var revealCache={};
+  function getReveal(i){ var url='reveals/'+encodeURIComponent(slug(H))+'/f'+i+'.json?v='+(window.HC_VER||'');
+    return revealCache[url]||(revealCache[url]=fetch(url).then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
+      .catch(function(e){ delete revealCache[url]; throw e; })); }   // a failed fetch is not cached, so a retry works
+  function hasQuery(q){ return q && !/^\(no query/i.test(q.trim()); }
+  function isFreeText(r){ return r.type!=='multiple_choice' && /sentence|reasoning/i.test(r.format||''); }
+
+  // theme
+  var saved=store('hc-theme'); if(saved) document.documentElement.setAttribute('data-theme',saved);
+  $('theme').onclick=function(){ var dark=document.documentElement.getAttribute('data-theme')==='dark' ||
+      (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+    var next=dark?'light':'dark'; document.documentElement.setAttribute('data-theme',next); store('hc-theme',next); };
+
+  // first-visit intro
+  function showIntro(on){ $('intro').hidden=!on; }
+  showIntro(!store('hc-intro-seen'));
+  $('intro-ok').onclick=function(){ store('hc-intro-seen',true); showIntro(false); };
+  $('how').onclick=function(){ showIntro($('intro').hidden); if(!$('intro').hidden) $('intro').scrollIntoView({behavior:'smooth'}); };
+
+  var hunts=(window.HUNTS||[]).filter(function(h){ return h.guide; });
+  if(!hunts.length){ $('content').innerHTML='<p>No guides yet. Run <code>python build.py</code>.</p>'; return; }
+  var sel=$('hunt-select');
+  hunts.forEach(function(h,i){ var o=document.createElement('option'); o.value=i; o.textContent=h.guide.title||h.meta.title; sel.appendChild(o); });
+
+  var H, G, M, flags, P, KEY, cur, step, ui;  // current hunt state; cur = -1 for orientation
+
+  function slug(h){ return h.meta.slug||h.guide.hunt; }
+  function fid(i){ return i<0 ? 'orient' : 'f'+i; }
+  function save(){ P.lastFlag=cur; P.lastStep=step; store(KEY,P); }
+
+  function loadHunt(i){
+    H=hunts[i]; G=H.guide; M=H.meta||{}; flags=G.flags||[];
+    KEY='hc-progress-'+slug(H);
+    P=store(KEY)||{solved:[],revealed:[],lastFlag:-1,lastStep:0};
+    var ws=M.workspace||{}; $('ws-name').textContent=ws.name||G.workspace||'';
+    var m=/^#flag-(\d+)$/.exec(location.hash), fromHash=m?+m[1]:null;
+    go(fromHash!=null&&fromHash<flags.length ? fromHash : P.lastFlag, fromHash!=null?0:P.lastStep, true);
+  }
+  sel.onchange=function(){ loadHunt(+sel.value); };
+  $('copy-ws').onclick=function(){ var ws=M.workspace||{}; copy(ws.guid||G.workspace,$('copy-ws'),'Copy ID'); };
+
+  function copy(text,btn,label){
+    var done=function(){ btn.textContent='Copied'; setTimeout(function(){ btn.textContent=label; },1500); };
+    if(navigator.clipboard) navigator.clipboard.writeText(text).then(done,function(){});
+  }
+
+  function progress(){
+    var total=0, got=0;
+    flags.forEach(function(f,i){ total+=+f.points||0; if(P.solved.indexOf(fid(i))>=0) got+=+f.points||0; });
+    $('pbar').style.width=(total?Math.round(100*got/total):0)+'%';
+    $('ptext').innerHTML='<b>'+got+'</b> / '+total+' pts · <b>'+P.solved.length+'</b> of '+flags.length+' flags';
+  }
+
+  function tactics(){
+    var out=[], idx={};
+    flags.forEach(function(f,i){ if(!(f.section in idx)){ idx[f.section]=out.length; out.push({sec:f.section,items:[]}); } out[idx[f.section]].items.push(i); });
+    return out;
+  }
+  function marker(i){ var id=fid(i); return P.solved.indexOf(id)>=0?'solved':(P.revealed.indexOf(id)>=0?'revealed':''); }
+  function shortName(f){ return f.flag.replace(/^Q\d+\s*-\s*/,''); }
+
+  function renderRail(){
+    var html='<li class="tac'+(cur<0?' active':'')+'"><button type="button" data-go="-1"><span class="n">0</span>Get your bearings</button></li>';
+    tactics().forEach(function(t){
+      var num=(t.sec.match(/^\d+/)||[''])[0], name=t.sec.replace(/^\d+\s*/,'');
+      var active=t.items.indexOf(cur)>=0, solved=t.items.filter(function(i){return marker(i)==='solved';}).length;
+      html+='<li class="tac'+(active?' active':'')+'"><button type="button" data-go="'+t.items[0]+'" aria-expanded="'+active+'"><span class="n">'+esc(num)+'</span>'+esc(name)+'<span class="c">'+solved+'/'+t.items.length+'</span></button>';
+      if(active){ html+='<ol class="flags">'; t.items.forEach(function(i){ var f=flags[i];
+        html+='<li><button type="button" data-go="'+i+'"'+(i===cur?' aria-current="true"':'')+'><span class="mk '+marker(i)+'" aria-hidden="true"></span>'+esc(shortName(f))+'<span class="pts">'+esc(f.points)+'</span>'
+          +(marker(i)?'<span class="sr" style="position:absolute;left:-9999px">('+marker(i)+')</span>':'')+'</button></li>'; });
+        html+='</ol>'; }
+      html+='</li>';
+    });
+    $('rail').innerHTML=html;
+    $('rail-cur').textContent=cur<0?'Get your bearings':flags[cur].section.replace(/^\d+\s*/,'')+' · '+shortName(flags[cur]);
+    $('rail').querySelectorAll('[data-go]').forEach(function(b){ b.onclick=function(){ go(+b.getAttribute('data-go'),0); if(matchMedia('(max-width:860px)').matches) $('railbox').open=false; }; });
+  }
+
+  // build the stepper item list for the current flag
+  function items(){
+    if(cur<0){ var o=G.orientation||{}; return [{t:'Why start here',k:'why'},{t:'Set Defender to UTC',k:'tz'},{t:'Run this',k:'orient-q'}]; }
+    var f=flags[cur], list=[{t:'Where to look',k:'where'}];
+    (f.steps||[]).forEach(function(s,i){ list.push({t:(f.steps.length>1?'Step '+(i+1):'Work it out'),k:'step',i:i}); });
+    list.push({t:'Submit your answer',k:'submit'});
+    return list;
+  }
+
+  // the workspace hint is the toolbar label; Copy ID sits in the toolbar on phones (the header hides it there)
+  function codeBlock(q,url){
+    var ws=(M.workspace||{}).name;
+    return '<div class="code"><div class="cbar"><span class="lbl">KQL'+(ws?' · run in '+esc(ws):'')+'</span>'
+      +(ws?'<button class="btn ghost ws-copy" type="button" data-copyws>Copy ID</button>':'')
+      +'<button class="btn ghost" type="button" data-copy>Copy query</button>'
+      +(url?'<a class="btn primary" target="_blank" rel="noopener" href="'+esc(url)+'">Open in Defender ↗</a>':'')+'</div><pre>'+kql(q)+'</pre></div>';
+  }
+  function hintBox(id,look,obs){
+    return (look||obs)?'<div class="hint" id="'+id+'" hidden data-look="'+esc(look||'')+'" data-obs="'+esc(obs||'')+'"></div>':'';
+  }
+  // one action row: the hint toggle (secondary) beside the one primary button
+  function actions(id,look,obs,primary){
+    return hintBox(id,look,obs)+'<div class="ans-row">'
+      +((look||obs)?'<button class="btn" type="button" aria-expanded="false" aria-controls="'+id+'" data-hint>What am I looking for?</button>':'')+primary+'</div>';
+  }
+
+  function bodyFor(it){
+    if(it.k==='why'){ var o=G.orientation; return '<p>'+esc(o.why)+'</p><button class="btn primary" type="button" data-next>Next</button>'; }
+    if(it.k==='tz'){ var tzUrl='https://security.microsoft.com/security-settings2'+(M.tenant_id?'?tid='+M.tenant_id:'');
+      return '<p><strong>Why:</strong> every time in this manual, and every time typed inside a query (like <code>datetime(2025-09-16 19:40)</code>), is UTC. Defender shows results in your <em>local</em> time unless you tell it otherwise. For example, Vancouver shows UTC -07:00, so an event at 19:40 UTC appears as 12:40 on screen, and the times you are told to look for never line up with the rows you see. Queries still run in UTC either way; only what you read is shifted.</p>'
+        +'<p><strong>To what:</strong> UTC. Not your city, not "Local".</p>'
+        +'<p><strong>How (one time, about 20 seconds):</strong></p><ol class="tzsteps">'
+        +'<li>Open <a href="'+tzUrl+'" target="_blank" rel="noopener">Defender time zone settings ↗</a>. The long way: in Defender\'s left menu choose <strong>Settings</strong>, then <strong>Microsoft Defender portal</strong>. (Not the gear icon at the top right: that panel is themes and your account.)</li>'
+        +'<li>Under <strong>Set time zone for Microsoft Defender</strong>, open the <strong>Time zone</strong> box. It says <strong>Local</strong> with your own offset, for example <strong>Local (UTC -07:00)</strong> in Vancouver.</li>'
+        +'<li>Pick <strong>UTC</strong>.</li>'
+        +'<li>Refresh any open Defender tab (F5). Defender itself says the change may not show until you do.</li></ol>'
+        +'<p><strong>Check it worked:</strong> run the next step\'s query. On the Logon row, <strong>FirstEvent</strong> should read 16 Sep 2025 at <strong>18:34</strong> (6:34 PM). If it shows any other hour, Defender is still on your local time.</p>'
+        +'<p class="mitre">The setting covers incidents, investigations and advanced hunting in your account only. Switch it back the same way (pick Local) whenever you like; real-world shifts usually stay on UTC, because every log source and every teammate agrees on it.</p>'
+        +'<button class="btn primary" type="button" data-next>Done, it says UTC</button>'; }
+    if(it.k==='orient-q'){ var o2=G.orientation; return '<p>'+esc(o2.do)+'</p>'+codeBlock(o2.query,o2.defender_url)
+      +actions('h-orient',o2.look_for,'','<button class="btn primary" type="button" data-goflag="0">I ran it, start the first flag</button>'); }
+    var f=flags[cur];
+    if(it.k==='where'){ var w=f.where_to_look||{};
+      return '<p><strong>'+esc(w.decision)+'</strong></p>'+(w.why_here?'<p>'+esc(w.why_here)+'</p>':'')
+        +(w.why_not_others?'<p class="lab">Why not somewhere else</p><p>'+esc(w.why_not_others)+'</p>':'')
+        +'<button class="btn primary" type="button" data-next>Next</button>'; }
+    if(it.k==='step'){ var s=f.steps[it.i], q=hasQuery(s.query);
+      return '<p>'+esc(s.think)+'</p>'+(q?codeBlock(s.query,s.defender_url):'')
+        +actions('h-'+cur+'-'+it.i,s.look_for,s.observe,'<button class="btn primary" type="button" data-next>'+(q?'I ran it, next step':'Next')+'</button>'); }
+    if(it.k==='submit'){ var r=f.reveal||{}, h='';
+      if(r.type==='multiple_choice'){
+        h+='<fieldset><legend class="lab">Pick one</legend>';
+        (r.choices||[]).forEach(function(c,ci){ h+='<label class="choice"><input type="radio" name="mc" value="'+ci+'">'+esc(c)+'</label>'; });
+        h+='</fieldset><div class="ans-row"><button class="btn primary" type="button" data-check>Check</button><button class="btn link" type="button" data-reveal>Reveal answer</button></div>';
+      } else if(isFreeText(r)){
+        var mine=(P.notes||{})[fid(cur)];
+        h+='<label class="lab" for="ans">Write your reasoning'+(r.format?' ('+esc(r.format)+')':'')+'</label><div class="ans-row"><textarea id="ans"'+(mine!=null?' readonly':'')+'>'+esc(mine||'')+'</textarea></div>'
+          +(mine!=null?'':'<p class="mitre">There is no single string to check here. Write yours first: it locks, then the model answer appears and you mark yourself. Points count only on that path.</p>'
+          +'<div class="ans-row"><button class="btn primary" type="button" data-lock>Lock my reasoning and compare</button><button class="btn link" type="button" data-reveal>Show the model answer without writing</button></div>');
+      } else {
+        h+='<label class="lab" for="ans">Your answer'+(r.format?' ('+esc(r.format)+')':'')+'</label><div class="ans-row"><input id="ans" autocomplete="off" spellcheck="false"><button class="btn primary" type="button" data-check>Check</button></div>'
+          +'<div class="ans-row"><button class="btn link" type="button" data-reveal>Reveal answer</button></div>';
+      }
+      return h+'<div id="fb" aria-live="polite"></div><div id="ansbox"></div>'; }
+  }
+
+  function render(){
+    var list=items(), html='';
+    if(G.orientation&&G.orientation.gotcha) html+='<div class="ground" role="note"><span aria-hidden="true">⚠</span><div><strong>Ground rule:</strong> sort and filter on Timestamp, never TimeGenerated. Times are UTC.'
+      +'<details><summary>Why?</summary><p>'+esc(G.orientation.gotcha)+'</p><p><button class="inlink" type="button" data-gotz>How to set Defender to UTC</button> &middot; <a href="/knowledge/kql-cookbook#two-clocks">The two clocks, explained</a></p></details></div></div>';
+    if(cur<0){ html+='<div class="fhead"><p class="crumb">0 · Orientation</p><h1 class="ft">'+esc(G.orientation.title)+'</h1><p class="obj">Learn the ground first: what telemetry exists, over what time window, for which host.</p></div>'; }
+    else { var f=flags[cur];
+      html+='<div class="fhead"><p class="crumb">'+esc(f.section.replace(/^(\d+)\s*/,'$1 · '))+' › '+esc((f.flag.match(/^Q\d+/)||[''])[0])+'</p><h1 class="ft">'+esc(shortName(f))+'</h1>'
+        +'<div class="fmeta"><span class="p">'+esc(f.points)+' pts</span>'+(f.mitre?'<span>'+esc(f.mitre)+'</span>':'')+'</div><p class="obj">'+esc(f.objective)+'</p></div>'; }
+    html+='<ol class="stepper">';
+    list.forEach(function(it,i){ var st=i<step?'done':(i===step?'cur':'');
+      html+='<li class="st '+st+'"><span class="dot" aria-hidden="true">'+(i<step?'✓':(i+1))+'</span><h3><button type="button" data-step="'+i+'" aria-expanded="'+(i===step)+'">'+esc(it.t)+(i<step?'<span style="position:absolute;left:-9999px"> (done)</span>':'')+'</button></h3>'
+        +(i===step?'<div class="sbody">'+bodyFor(it)+'</div>':'')+'</li>'; });
+    html+='</ol>';
+    html+='<div id="done" hidden></div>';
+    var prev=cur-1, next=cur+1;
+    html+='<div class="pager">'+(cur>=0?'<button type="button" data-goflag="'+prev+'">← '+esc(prev<0?'Get your bearings':shortName(flags[prev]))+'</button>':'<span></span>')
+      +(next<flags.length?'<button type="button" data-goflag="'+next+'">'+esc(shortName(flags[next]))+' →</button>':'')+'</div>';
+    var main=$('content'); main.innerHTML=html;
+    wire(main); renderRail(); progress(); save(); doneBox();
+  }
+
+  function go(i,s,noScroll){
+    cur=Math.max(-1,Math.min(i==null?-1:i,flags.length-1)); step=s||0;
+    var maxStep=items().length-1; if(step>maxStep) step=0;
+    try{ history.replaceState(null,'',cur<0?location.pathname:'#flag-'+cur); }catch(e){}
+    render(); if(!noScroll) window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function wire(root){
+    root.querySelectorAll('[data-step]').forEach(function(b){ b.onclick=function(){ step=+b.getAttribute('data-step'); render(); }; });
+    root.querySelectorAll('[data-next]').forEach(function(b){ b.onclick=function(){ step++; render(); var c=root.querySelector('.st.cur'); if(c) c.scrollIntoView({behavior:'smooth',block:'nearest'}); }; });
+    root.querySelectorAll('[data-goflag]').forEach(function(b){ b.onclick=function(){ go(+b.getAttribute('data-goflag'),0); }; });
+    root.querySelectorAll('[data-copy]').forEach(function(b){ b.onclick=function(){ copy(b.closest('.code').querySelector('pre').textContent,b,'Copy query'); }; });
+    root.querySelectorAll('[data-copyws]').forEach(function(b){ b.onclick=function(){ var ws=M.workspace||{}; copy(ws.guid||G.workspace,b,'Copy ID'); }; });
+    root.querySelectorAll('[data-hint]').forEach(function(b){ b.onclick=function(){
+      var box=$(b.getAttribute('aria-controls')), open=b.getAttribute('aria-expanded')==='true';
+      if(!open && !box.innerHTML){ var lk=box.getAttribute('data-look'), ob=box.getAttribute('data-obs');
+        box.innerHTML=(lk?'<p>'+esc(lk)+'</p>':'')+(ob?'<p>'+esc(ob)+'</p>':''); }
+      box.hidden=open; b.setAttribute('aria-expanded',String(!open)); b.textContent=open?'What am I looking for?':'Hide the hint'; }; });
+    root.querySelectorAll('[data-gotz]').forEach(function(b){ b.onclick=function(){ go(-1,1); }; });
+    var chk=root.querySelector('[data-check]'), rev=root.querySelector('[data-reveal]'), lock=root.querySelector('[data-lock]');
+    var inp=root.querySelector('#ans'); if(inp&&inp.tagName==='INPUT') inp.onkeydown=function(e){ if(e.key==='Enter'&&chk) chk.click(); };
+    if(chk) chk.onclick=check; if(rev) rev.onclick=reveal; if(lock) lock.onclick=lockReasoning;
+    var r=cur>=0&&flags[cur].reveal; if(r&&isFreeText(r)&&P.notes&&P.notes[fid(cur)]!=null&&$('ansbox')) selfMark();
+  }
+
+  // answers are not in data.js: Check compares hashes, Reveal fetches reveals/<slug>/f<N>.json on demand
+  function showAnswer(){
+    var r=flags[cur].reveal||{}, at=cur;
+    return getReveal(cur).then(function(a){ if(at!==cur||!$('ansbox')) return;
+      $('ansbox').innerHTML='<div class="answer">'+(isFreeText(r)?'<strong>Model answer:</strong> '+esc(a.answer):'<strong>Answer:</strong> <code>'+esc(a.answer)+'</code>')
+        +(a.why?'<p>'+esc(a.why)+'</p>':'')+'</div>';
+    },function(){ if($('ansbox')) $('ansbox').innerHTML='<div class="fb no">Could not load the answer. Refresh and try again.</div>'; });
+  }
+  function mark(list){ var id=fid(cur); if(P[list].indexOf(id)<0) P[list].push(id); save(); renderRail(); progress(); doneBox(); }
+  // completion: every flag solved or revealed -> score summary + Request the next hunt
+  function doneBox(){
+    var box=$('done'); if(!box) return;
+    var left=flags.filter(function(f,i){ return !marker(i); }).length;
+    box.hidden=left>0; if(left) return;
+    var total=0, got=0; flags.forEach(function(f,i){ total+=+f.points||0; if(marker(i)==='solved') got+=+f.points||0; });
+    box.className='done';
+    box.innerHTML='<p>Done with <strong>'+esc(G.title||M.title)+'</strong>: '+got+' / '+total+' pts, '+P.solved.length+' of '+flags.length+' flags solved.</p>'
+      +'<a class="btn" href="/request">Request the next hunt</a>';
+  }
+  function check(){
+    var r=flags[cur].reveal||{}, given, at=cur;
+    if(r.type==='multiple_choice'){ var c=$('main').querySelector('input[name=mc]:checked'); if(!c){ $('fb').innerHTML='<div class="fb no">Pick one first.</div>'; return; } given=r.choices[+c.value]; }
+    else given=$('ans').value;
+    if(!String(given).trim()){ $('fb').innerHTML='<div class="fb no">Type your answer first.</div>'; return; }
+    sha((r.salt||'')+norm(given,r.unordered)).then(function(h){ if(at!==cur) return;
+      if((r.check||[]).indexOf(h)>=0){ $('fb').innerHTML='<div class="fb ok">Correct. You found it yourself.</div>'; mark('solved'); showAnswer(); }
+      else $('fb').innerHTML='<div class="fb no">Not quite. Re-read the last step\'s results and the hint, then try again.</div>';
+    });
+  }
+  function reveal(){ showAnswer(); if(P.solved.indexOf(fid(cur))<0) mark('revealed'); }
+  // free-text flags: write first, it locks, then compare and mark yourself
+  function lockReasoning(){
+    var t=$('ans').value.trim();
+    if(!t){ $('fb').innerHTML='<div class="fb no">Write your reasoning first. It locks once you compare.</div>'; return; }
+    P.notes=P.notes||{}; P.notes[fid(cur)]=t; save(); render();
+  }
+  function selfMark(){
+    showAnswer();
+    var id=fid(cur);
+    if(P.solved.indexOf(id)>=0){ $('fb').innerHTML='<div class="fb ok">Marked as solved: your reasoning matched.</div>'; return; }
+    if(P.revealed.indexOf(id)>=0){ $('fb').innerHTML='<div class="fb no">Marked as not matching. No points for this one.</div>'; return; }
+    $('fb').innerHTML='<p class="mitre">Your reasoning is locked. Compare it with the model answer, then mark yourself honestly.</p>'
+      +'<div class="ans-row"><button class="btn primary" type="button" id="matched">My reasoning matches it</button><button class="btn" type="button" id="nomatch">It doesn\'t match</button></div>';
+    $('matched').onclick=function(){ mark('solved'); selfMark(); };
+    $('nomatch').onclick=function(){ mark('revealed'); selfMark(); };
+  }
+
+  window.addEventListener('hashchange',function(){ var m=/^#flag-(\d+)$/.exec(location.hash); if(m) go(+m[1],0); });
+  if(matchMedia('(max-width:860px)').matches) $('railbox').open=false;
+  loadHunt(0);
+})();
+</script>
+</body>
+</html>
