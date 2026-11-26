@@ -17,6 +17,11 @@ REG = {e["slug"]: e for e in json.loads((HUNTS / "registry.json").read_text(enco
 # what a member's page needs, nothing more (no internal notes, no subscription or resource group)
 META_KEYS = ("slug", "title", "points", "flag_count", "host", "tables", "tenant_id", "incident_window_utc")
 FREE = re.compile(r"sentence|reasoning", re.I)
+# Round 8 (Ken, 26 Nov): the hunt authors' credit, worded by them. One string for every page so it can't drift.
+HUNT_CREDIT = "Hunt content by SancLogic / the Cyber Range threat hunt team"
+FOOTER_CREDIT = f"{HUNT_CREDIT}. Manuals by Ken Kariuki. Built on the Cyber Range MCP. Independent, not affiliated."
+CREDIT_SPAN = f'<span class="credit">{FOOTER_CREDIT}</span>'
+NAMES_OK = {"Ken Kariuki", "SancLogic"}   # the only names allowed after "by" anywhere in the built site
 
 
 def sha(s):
@@ -36,6 +41,8 @@ def build_hunt(d):
     if not entry.get("clearance"):
         print(f"REFUSED {slug}: no clearance record in hunts/registry.json (when publishing was cleared, and its scope)")
         return None, {}
+    if not entry.get("credit"):
+        print(f"REFUSED {slug}: no credit in hunts/registry.json (who made this hunt)"); return None, {}
     hj, gj = d / "hunt.json", d / "guide.json"
     if not (hj.exists() and gj.exists()):
         return None, {}
@@ -43,6 +50,7 @@ def build_hunt(d):
     meta = {k: full[k] for k in META_KEYS if k in full}
     ws = full.get("workspace") or {}
     meta["workspace"] = {"name": ws.get("name"), "guid": ws.get("guid")}
+    meta["credit"] = entry["credit"]
     tid = meta.get("tenant_id")
 
     guide = json.loads(gj.read_text(encoding="utf-8"))
@@ -195,7 +203,7 @@ def page(title, body, current=None):
   <footer>
     <nav aria-label="Method references">{nav}<a href="/request"{here if current == "request" else ""}>Request a hunt</a></nav>
     <span class="spacer"></span>
-    <span class="credit">Practice and solved hunts only, never a live one. Built on the Cyber Range MCP. A teaching project by Ken Kariuki.</span>
+    {CREDIT_SPAN}
   </footer>
 </div>
 {PAGE_JS}
@@ -268,7 +276,22 @@ def main():
     # stamp the data version into the page: the kenmwara.com zone caches .js for 4h in browsers
     idx = SITE / "index.html"
     idx.write_text(re.sub(r'src="data\.js(\?v=\w+)?"', f'src="data.js?v={ver}"', idx.read_text(encoding="utf-8")), encoding="utf-8")
-    check_scripts([idx, SITE / "404.html", SITE / "request.html", *sorted(kd.glob("*.html")), ROOT / "tools" / "review.html"])
+    # the hand-written pages take the same footer credit
+    review = ROOT / "tools" / "review.html"
+    for p in (idx, review):
+        p.write_text(re.sub(r'<span class="credit">.*?</span>', CREDIT_SPAN, p.read_text(encoding="utf-8")), encoding="utf-8")
+    pages = [idx, SITE / "404.html", SITE / "request.html", *sorted(kd.glob("*.html")), review]
+    missing = [p.name for p in pages if CREDIT_SPAN not in p.read_text(encoding="utf-8")]
+    if missing:
+        sys.exit(f"REFUSED: footer credit missing in {missing}")
+    # names: only the allowlist may follow "by" (people's names stay off the site)
+    # (code, scripts and styles are skipped: "summarize count() by DeviceName" is KQL, not a person)
+    prose = lambda h: re.sub(r"<[^>]+>", " ", re.sub(r"(?s)<(script|style|pre|code)\b.*?</\1>", " ", h))
+    named = {m for p in pages for m in re.findall(r"\bby ((?:[A-Z][\w-]+ ?)+)", prose(p.read_text(encoding="utf-8")))}
+    bad = {n.strip() for n in named} - NAMES_OK
+    if bad:
+        sys.exit(f"REFUSED: names outside the allowlist: {sorted(bad)}")
+    check_scripts(pages)
     print(f"wrote data.js with {len(hunts)} hunt(s), {sum(len(v) for v in all_reveals.values())} reveals, "
           f"{len(list(KNOW.glob('*.md')))} knowledge pages, version {ver}")
 

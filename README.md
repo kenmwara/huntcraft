@@ -3,6 +3,8 @@
 A step-by-step threat-hunting instruction manual for Cyber Range members, live at
 **https://huntcraft.kenmwara.com**.
 
+Hunt content by SancLogic / the Cyber Range threat hunt team. Manuals by Ken Kariuki. Built on the Cyber Range MCP. Independent, not affiliated.
+
 HuntCraft teaches the method, not the answers. For each flag of a practice hunt it explains where to look and why,
 gives one query at a time with the reasoning behind it, and describes the pattern to look for. Members run every
 query in their own Microsoft Defender and find the flag themselves. Answers stay hidden until a correct guess or a
@@ -87,3 +89,9 @@ Members can request the next hunt at https://huntcraft.kenmwara.com/request.
 Diagram source: `images/flow.drawio`.
 
 </details>
+
+## Credits
+
+Hunt content by SancLogic / the Cyber Range threat hunt team. Manuals by Ken Kariuki. Built on the Cyber Range MCP. Independent, not affiliated.
+
+The Inter typeface (used for the site and its images, bundled at `tools/fonts/Inter.ttf`) is licensed under the SIL Open Font License 1.1 (`tools/fonts/OFL.txt`).

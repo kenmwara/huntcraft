@@ -20,7 +20,8 @@ window.HUNTS = [
    "workspace": {
     "name": "LAW-HuntPractice",
     "guid": "ee718ed3-9e76-4b9d-a7b5-3500446fe4f4"
-   }
+   },
+   "credit": "Hunt content by SancLogic / the Cyber Range threat hunt team"
   },
   "guide": {
    "hunt": "rdp-flare",
@@ -392,4 +393,4 @@ window.HUNTS = [
   }
  }
 ];
-window.HC_VER = "ec779aa9d7";
+window.HC_VER = "41bb921656";

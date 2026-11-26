@@ -8,6 +8,7 @@
     "table_prefix": "RdpFlarePractice",
     "status": "practice",
     "owner": "Cyber Range",
+    "credit": "Hunt content by SancLogic / the Cyber Range threat hunt team",
     "clearance": {
       "date": "2026-11-25",
       "scope": "public solution publishing"

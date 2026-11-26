@@ -229,11 +229,11 @@ footer .credit{padding:10px 0}
       <a href="/request">Request a hunt</a>
     </nav>
     <span class="spacer"></span>
-    <span class="credit">Practice and solved hunts only, never a live one. Built on the Cyber Range MCP. A teaching project by Ken Kariuki.</span>
+    <span class="credit">Hunt content by SancLogic / the Cyber Range threat hunt team. Manuals by Ken Kariuki. Built on the Cyber Range MCP. Independent, not affiliated.</span>
   </footer>
 </div>
 
-<script src="data.js?v=ec779aa9d7"></script>
+<script src="data.js?v=41bb921656"></script>
 <script>
 (function(){
   var $ = function(id){ return document.getElementById(id); };
@@ -397,9 +397,9 @@ footer .credit{padding:10px 0}
     var list=items(), html='';
     if(G.orientation&&G.orientation.gotcha) html+='<div class="ground" role="note"><span aria-hidden="true">⚠</span><div><strong>Ground rule:</strong> sort and filter on Timestamp, never TimeGenerated. Times are UTC.'
       +'<details><summary>Why?</summary><p>'+esc(G.orientation.gotcha)+'</p><p><button class="inlink" type="button" data-gotz>How to set Defender to UTC</button> &middot; <a href="/knowledge/kql-cookbook#two-clocks">The two clocks, explained</a></p></details></div></div>';
-    if(cur<0){ html+='<div class="fhead"><p class="crumb">0 · Orientation</p><h1 class="ft">'+esc(G.orientation.title)+'</h1><p class="obj">Learn the ground first: what telemetry exists, over what time window, for which host.</p></div>'; }
+    if(cur<0){ html+='<div class="fhead"><p class="crumb">0 · Orientation</p><h1 class="ft">'+esc(G.orientation.title)+'</h1>'+(M.credit?'<p class="crumb">'+esc(M.credit)+'</p>':'')+'<p class="obj">Learn the ground first: what telemetry exists, over what time window, for which host.</p></div>'; }
     else { var f=flags[cur];
-      html+='<div class="fhead"><p class="crumb">'+esc(f.section.replace(/^(\d+)\s*/,'$1 · '))+' › '+esc((f.flag.match(/^Q\d+/)||[''])[0])+'</p><h1 class="ft">'+esc(shortName(f))+'</h1>'
+      html+='<div class="fhead"><p class="crumb">'+esc(f.section.replace(/^(\d+)\s*/,'$1 · '))+' › '+esc((f.flag.match(/^Q\d+/)||[''])[0])+(M.credit?' · '+esc(M.credit):'')+'</p><h1 class="ft">'+esc(shortName(f))+'</h1>'
         +'<div class="fmeta"><span class="p">'+esc(f.points)+' pts</span>'+(f.mitre?'<span>'+esc(f.mitre)+'</span>':'')+'</div><p class="obj">'+esc(f.objective)+'</p></div>'; }
     html+='<ol class="stepper">';
     list.forEach(function(it,i){ var st=i<step?'done':(i===step?'cur':'');
