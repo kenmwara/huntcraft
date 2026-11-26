@@ -9,7 +9,7 @@
   "why": "You never start by querying for the answer. You start by learning the ground: which tables hold data, over what time window, and for which host. Thirty seconds here saves you from guessing later.",
   "do": "Run this. It tells you what telemetry exists and how much.",
   "query": "union withsource=T RdpFlarePractice*_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| summarize Events=count(), FirstEvent=min(Timestamp), LastEvent=max(Timestamp), LoadedAt=max(TimeGenerated), Hosts=make_set(DeviceName) by T",
-  "look_for": "4 rows, one per table: Logon (260 events), Process (1,799), Network (1,377) and File (4,768), all from one host, slflarewinsysmo. Now compare the two clocks. FirstEvent and LastEvent come from Timestamp, the real event time: 16 to 18 Sep 2025. LoadedAt comes from TimeGenerated: 29 Oct 2026 on every table, the day the lab loaded the logs. That is why every query here filters and sorts on Timestamp.",
+  "look_for": "4 rows, one per table: Logon (260 events), Process (1,799), Network (1,377) and File (4,768), all from one host, slflarewinsysmo. These are the lab's copies of the Defender tables you will meet at work: RdpFlarePracticeLogon_CL is DeviceLogonEvents, RdpFlarePracticeProcess_CL is DeviceProcessEvents, RdpFlarePracticeNetwork_CL is DeviceNetworkEvents and RdpFlarePracticeFile_CL is DeviceFileEvents (same columns, a different name). Now compare the two clocks. FirstEvent and LastEvent come from Timestamp, the real event time: 16 to 18 Sep 2025. LoadedAt comes from TimeGenerated: 29 Oct 2026 on every table, the day the lab loaded the logs. That is why every query here filters and sorts on Timestamp.",
   "gotcha": "Every row's TimeGenerated is the same (the moment the lab loaded the logs, 29 Oct 2026). The REAL attack time is in the Timestamp column, so sort and filter on Timestamp. Each query starts with a TimeGenerated line so the portal's time picker (Defender defaults to 7 days) can't hide the rows. Every time in this manual is UTC, but Defender shows your local time until you switch it, so set Defender to UTC before you start."
  },
  "flags": [
@@ -33,9 +33,9 @@
     },
     {
      "think": "You have probably already spotted it. Confirm it the strict way: show only the successful RemoteInteractive (real RDP) logons from an external address. If one IP and one account survive this filter, that is your break-in.",
-     "query": "RdpFlarePracticeLogon_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where LogonType == \"RemoteInteractive\" and ActionType == \"LogonSuccess\"\n| where RemoteIP !startswith \"10.\" and RemoteIP !startswith \"192.168.\"\n| project Timestamp, RemoteIP, AccountName\n| order by Timestamp asc",
+     "query": "RdpFlarePracticeLogon_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where LogonType == \"RemoteInteractive\" and ActionType == \"LogonSuccess\"\n| where RemoteIP !startswith \"10.\" and RemoteIP !startswith \"192.168.\"\n| project Timestamp, ActionType, RemoteIP, AccountName\n| order by Timestamp asc",
      "run_it": "Run it.",
-     "look_for": "3 rows. Two have an empty RemoteIP (sessions on the box itself); only one carries an external address. Note that row's address and its time. That time should read 18:43 on 16 Sep 2025; if it shows any other hour, Defender is still on your local time (Get your bearings, step 2).",
+     "look_for": "3 rows, each with ActionType LogonSuccess (the filter kept only the logons that worked). Two have an empty RemoteIP (sessions on the box itself); only one carries an external address. Note that row's address and its time. That time should read 18:43 on 16 Sep 2025; if it shows any other hour, Defender is still on your local time (Get your bearings, step 2).",
      "observe": "This is the moment of the break-in. You are now looking straight at the attacker's source address. You found it by reasoning, not by being told."
     }
    ],

@@ -233,7 +233,7 @@ footer .credit{padding:10px 0}
   </footer>
 </div>
 
-<script src="data.js?v=41bb921656"></script>
+<script src="data.js?v=79b515394d"></script>
 <script>
 (function(){
   var $ = function(id){ return document.getElementById(id); };
@@ -366,7 +366,7 @@ footer .credit{padding:10px 0}
         +'<p><strong>Check it worked:</strong> run the next step\'s query. On the Logon row, <strong>FirstEvent</strong> should read 16 Sep 2025 at <strong>18:34</strong> (6:34 PM). If it shows any other hour, Defender is still on your local time.</p>'
         +'<p class="mitre">The setting covers incidents, investigations and advanced hunting in your account only. Switch it back the same way (pick Local) whenever you like; real-world shifts usually stay on UTC, because every log source and every teammate agrees on it.</p>'
         +'<button class="btn primary" type="button" data-next>Done, it says UTC</button>'; }
-    if(it.k==='orient-q'){ var o2=G.orientation; return '<p>'+esc(o2.do)+'</p>'+codeBlock(o2.query,o2.defender_url)
+    if(it.k==='orient-q'){ var o2=G.orientation, wsn=esc((M.workspace||{}).name||'the hunt workspace'); return '<p>'+esc(o2.do)+'</p>'+'<p><strong>First, check your workspace.</strong> In Defender\'s Advanced hunting, the top right of the query editor reads <strong>Selected workspace: '+wsn+'</strong>. If it names a different workspace, switch it to '+wsn+' before you run anything: the hunt tables only exist there, so in any other workspace the query fails. In Microsoft Sentinel, pick '+wsn+' and open <strong>Logs</strong>.</p>'+codeBlock(o2.query,o2.defender_url)
       +actions('h-orient',o2.look_for,'','<button class="btn primary" type="button" data-goflag="0">I ran it, start the first flag</button>'); }
     var f=flags[cur];
     if(it.k==='where'){ var w=f.where_to_look||{};
