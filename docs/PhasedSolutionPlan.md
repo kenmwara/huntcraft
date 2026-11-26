@@ -1,6 +1,6 @@
 # HuntCraft: Phased Solution Plan
 
-Cairn stages per phase: Charter · Approve · Implement · Rehearse · Notch. Updated 25 Nov 2026.
+Cairn stages per phase: Charter · Approve · Implement · Rehearse · Notch. Updated 26 Nov 2026.
 
 | Phase | What | State |
 |---|---|---|
@@ -10,6 +10,7 @@ Cairn stages per phase: Charter · Approve · Implement · Rehearse · Notch. Up
 | 3 Member site | Two-pane instruction manual, Defender links, UTC setup, hashed checks, lock-first free text, 404, OG image, favicon | Done, live |
 | 4 Generator + review | `tools/generate.py` (solve, author, leak check, one rewrite, re-run) and `tools/review.py` (local review and publish) | Done (uses the Range MCP as it is: the claude.ai connector, deferred tool loading) |
 | 5 Deploy + repo + launch | Pages deploy; public repo `kenmwara/huntcraft` (code, site, manuals); private `kenmwara/huntcraft-solutions` (solve trails, reports, answer files, drafts, Chat handovers); Skool launch post (drafted for Ken to send) | Repos done; post open |
+| 7 Member review 1 (26 Nov) | "Set up Defender" step (workspace check with screenshot + Sentinel path, then UTC); wrong-workspace error line under every query; lab-to-Defender table map (`hunt.json` `table_map`); Defender names on each flag's first table mention; Q1 step 2 shows ActionType and LogonType; project-what-you-filter lint (generator rule, `review.py` info, build warning, selftest); Q1 investigation-path sentence | Done, live |
 | 6 Hosted generator | The "add a hunt" box for members (design brief in the private repo) | Parked: the Range MCP is used as it is (each member's own claude.ai connector), so generation stays local for now |
 
 ## How a draft reaches the library
@@ -32,6 +33,8 @@ Drafts carry their answers (the reveal, the solve trail), so they never travel t
 - Private: `private/<slug>/{solve.json, report.md, answers.json, hunt.private.json}`, `private/_drafts/`, `private/docs/`.
 
 ## Open items
+- Defender "Open in Defender" links cannot preselect a workspace (Defender's own Share link carries only
+  `query` and `timeRangeId`; the workspace choice is per user and sticky). The setup step and the error line cover it.
 - Skool launch post (drafted for Ken to send).
 - Decided 25 Nov: use the Range MCP as it is. It accepts sign-ins only from the claude.ai connector, so the
   generator runs on that connector with deferred tool loading; no change is asked of the Range.

@@ -124,6 +124,41 @@ def defender_url(query, tenant_id):
             + "&timeRangeId=month" + (f"&tid={tenant_id}" if tenant_id else ""))
 
 
+FILTER_COL = re.compile(r"\b([A-Z][A-Za-z]+)\s*(?:==|!=|=~|!~|>=|<=|>|<|!?has(?:_any|_all)?\b|!?in~?\s*\(|!?(?:starts|ends)with\b|!?contains\b|between\b)")
+
+
+def shown_columns(query):
+    """Columns a query's results show: the last project/distinct list, or a summarize's aggregates + by list."""
+    cols, shown = set(), None
+    for line in query.split("\n"):
+        m = re.match(r"\s*\|\s*(project|distinct|summarize)\b(.*)", line)
+        if m:
+            body = m.group(2)
+            shown = set(re.findall(r"\b([A-Z][A-Za-z]+)\s*(?:=(?!=)|,|$|\))", body.split(" by ")[0] if m.group(1) == "summarize" else body))
+            if m.group(1) == "summarize" and " by " in body:
+                shown |= set(re.findall(r"\b([A-Z][A-Za-z]+)\b", body.split(" by ", 1)[1]))
+            if m.group(1) == "project":
+                shown |= set(re.findall(r"\b([A-Z][A-Za-z]+)\b", body))
+    return shown
+
+
+def project_gaps(flag):
+    """Member review 1: a column a step filters on and its hint talks about must show in the results.
+    Returns info lines like 'steps[1]: filters on LogonType and look_for names it, but the results don't show it'."""
+    out = []
+    for i, st in enumerate(flag.get("steps") or []):
+        q = st.get("query") or ""
+        shown = shown_columns(q)
+        if not q.strip() or q.strip().startswith("(") or shown is None:
+            continue
+        filtered = {c for line in q.split("\n") if re.match(r"\s*\|\s*where\b", line) for c in FILTER_COL.findall(line)}
+        talk = " ".join(st.get(k) or "" for k in ("look_for", "observe"))
+        for c in sorted(filtered - shown - {"TimeGenerated"}):
+            if re.search(rf"\b{c}\b", talk):
+                out.append(f"steps[{i}]: filters on {c} and the hint names it, but the results don't show it (add it to project)")
+    return out
+
+
 def answer_forms(answer):
     """Strings that would give the answer away if they appeared outside the reveal."""
     a = str(answer or "").strip().strip('"')
@@ -308,7 +343,7 @@ AUTHOR_SYSTEM = (
 
 STYLE_EXAMPLE = {
     "where_to_look": {
-        "decision": "Go to the File events table (ExampleFile_CL).",
+        "decision": "Go to the File events table (ExampleFile_CL, DeviceFileEvents in a real tenant).",
         "why_here": "A web shell is a file written into a web folder, so file-creation telemetry is where it first shows up.",
         "why_not_others": "Process events show what ran, not what was dropped. Network events show the request, not the file it left behind."
     },
@@ -386,12 +421,17 @@ Evidence: {solved.get("evidence")}
 Dead ends: {solved.get("dead_ends")}
 The real queries that ran, with row counts and sample rows: {json.dumps(trace, ensure_ascii=False)[:12000]}
 Orientation: tables {orient.get("tables")}, real time column {orient.get("time_column")}.
+Practice table -> production Defender table: {json.dumps(orient.get("table_map") or "derive it from the table name (..Logon_CL is DeviceLogonEvents, ..Process_CL DeviceProcessEvents, ..Network_CL DeviceNetworkEvents, ..File_CL DeviceFileEvents)")}
 
 Rules:
 - Teach the useful path, not every dead end. A dead end that teaches something can become a `think`.
 - `think` explains WHY this query and not another. `look_for` describes the pattern to spot, never the value.
 - Queries must be ones that actually ran above (or trivially tidied). A query must NOT filter on the answer itself.
   Never put the answer (or a piece of it: the IP, the file name, the command) in any field except reveal.
+- On the first mention of each `_CL` table in a flag, give its production Defender equivalent in brackets, for
+  example "RdpFlarePracticeLogon_CL (DeviceLogonEvents in a real tenant)". Once per flag, not on every mention.
+- Project what you filter: every column a step filters on in a `where` that its look_for or observe talks about must
+  also appear in that step's project (or summarize by / distinct), so the reader sees the value that proves it.
 - If the flag is knowledge or reasoning, use one step with query "(no query, reason it out)".
 - Multiple choice: never name or describe the wrong choices in where_to_look, think, look_for or observe, and never
   rule them out one by one. Teach the property that decides it (for example "which control stops a password attempt
@@ -478,6 +518,9 @@ def main():
     print("[orient] ...", flush=True)
     text, otrace = run_claude(orient_prompt(entry, guid), SOLVER_SYSTEM, tools=True, max_turns=14, label="orient")
     orient = last_json(text)
+    hj = HUNTS / ARGS.slug / "hunt.json"       # one source for the practice -> Defender names (orientation + author)
+    if hj.exists() and json.loads(hj.read_text(encoding="utf-8")).get("table_map"):
+        orient["table_map"] = {k: v["defender"] for k, v in json.loads(hj.read_text(encoding="utf-8"))["table_map"].items()}
     print(f"[orient] tables {orient.get('tables')}, hosts {orient.get('hosts')}, time column {orient.get('time_column')}")
 
     # 2. solve
@@ -700,6 +743,11 @@ def selftest():
     assert leak_hits(path)
     reuse = {"steps": [{"query": 'X | where RemoteIP == "185.92.220.87"'}], "reveal": {"answer": "185.92.220.87:8081"}}
     assert leak_hits(reuse) and not leak_hits(reuse, ["185.92.220.87"])
+    gap = {"steps": [{"query": 'T_CL\n| where LogonType == "RemoteInteractive" and ActionType == "LogonSuccess"\n| project Timestamp, RemoteIP',
+                      "look_for": "each row has ActionType LogonSuccess"}]}
+    assert len(project_gaps(gap)) == 1 and "ActionType" in project_gaps(gap)[0]       # LogonType isn't in the hint
+    gap["steps"][0]["query"] = gap["steps"][0]["query"].replace("RemoteIP", "RemoteIP, ActionType")
+    assert project_gaps(gap) == []
     assert widen("T_CL\n| count").split("\n")[1].startswith("| where TimeGenerated > ago(365d)")
     assert widen("let x = 1;\nT_CL") == "let x = 1;\nT_CL" and widen("(no query, reason it out)").startswith("(")
     # the hand-written RDP-Flare manual must pass the same leak check the generator applies
@@ -709,6 +757,7 @@ def selftest():
     for n, fl in enumerate(g["flags"]):
         hits = leak_hits(fl, [x["reveal"]["answer"] for x in g["flags"][:n]], ctx)
         assert not hits, f"hand-written {fl['flag']} leaks {hits}"
+        assert not project_gaps(fl), f"hand-written {fl['flag']}: {project_gaps(fl)}"
     reg = [e for e in load_registry() if e["status"] not in ("practice", "retired", "live")]
     assert not reg, f"registry status must be practice|retired|live: {reg}"
     print("selftest ok")

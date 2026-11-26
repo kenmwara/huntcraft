@@ -140,7 +140,7 @@ code.mask{font:13px "JetBrains Mono",monospace;padding:6px 10px;border-radius:6p
       if(m.rewritten) notes.push('The generator rewrote this flag once after its first draft leaked'+(m.first_leak&&m.first_leak.fields&&m.first_leak.fields.length?' ('+m.first_leak.fields.join(', ')+')':'')+'.');
       if(m.note) notes.push('Solver note: '+m.note+'.');
       if(m.matches_known===false) notes.push('The solver\'s answer does not match the known answer.');
-      (m.leak_info||[]).forEach(function(x){ notes.push('Info: '+x); });
+      (lk.info||m.leak_info||[]).forEach(function(x){ notes.push('Info: '+x); });
       if(notes.length) h+='<div class="note">'+notes.map(esc).join('<br>')+'</div>';
       h+='<div><div class="sub">'+esc(f.section)+(f.mitre?' &middot; '+esc(f.mitre):'')+' &middot; '+pill(tagOf(f.flag))+'</div>'
         +'<div class="row"><h1>'+esc(f.flag)+'</h1><label class="sub">Points <input type="text" data-p="'+base+'points" data-num value="'+esc(f.points)+'" style="width:70px"></label></div></div>';

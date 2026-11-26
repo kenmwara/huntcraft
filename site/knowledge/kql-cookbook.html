@@ -135,6 +135,15 @@ ol.stepper{list-style:none;margin:0;padding:0;counter-reset:s}
 .code pre .k{color:var(--code-key)} .code pre .p{color:var(--code-pipe)} .code pre .s{color:var(--code-str)}
 .hint{padding:10px 14px;border-radius:8px;background:var(--accent-soft);border:1px solid var(--line);font-size:14px}
 .hint p{margin:0 0 6px}.hint p:last-child{margin:0}
+.wserr{font-size:13px;color:var(--muted);margin:-4px 0 0}
+.sbody h4.part{font-size:15px;margin:6px 0 0}
+.shot{display:block;max-width:100%;width:auto;height:auto;border-radius:8px;border:1px solid var(--line)}
+.tmap{overflow-x:auto;margin:0 0 8px}
+.tmap table{border-collapse:collapse;font-size:13px;width:100%}
+.tmap th,.tmap td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tmap th{font-weight:600;color:var(--muted)}
+.tmap .num{text-align:right;font-variant-numeric:tabular-nums}
+.tmap code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;word-break:break-all}
 .ans-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .ans-row input,.ans-row textarea{flex:1 1 260px;min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:8px 12px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:14px}
 .ans-row textarea{font-family:inherit;min-height:84px}
@@ -408,7 +417,19 @@ DeviceProcessEvents | where FileName == &quot;&lt;payload&gt;.exe&quot;
 // anti-join / &quot;rare&quot; = things that appear now but not in the baseline
 </pre></div><div class="codebar"><button class="btn small" type="button" data-copy>Copy query</button></div>
 <p><strong>Rule of thumb:</strong> filter by <strong>time</strong> and <strong>host</strong> first (cheap, shrinks the data), then by behaviour, then
-<code>project</code> down to the columns you'll read. A query you can't read in one glance is too wide.</p></article></main>
+<code>project</code> down to the columns you'll read. A query you can't read in one glance is too wide.</p>
+<h2 id="common-errors">Common errors</h2>
+<p><strong><code>Failed to resolve table expression named 'RdpFlarePractice*_CL'</code></strong> (or "Failed to resolve table…" with any
+table name). You're in the wrong workspace: the table exists, just not in the one your editor is pointed at.
+In Defender's Advanced hunting, look at the top right of the page, level with the title: it should read
+<strong>Selected workspace:</strong> followed by the hunt's workspace (for RDP-Flare, <code>LAW-HuntPractice</code>). If it shows another
+one, click it, pick the right workspace in the <strong>Workspace scope</strong> panel, then <strong>Apply</strong>. Defender remembers the
+choice, and "Open in Defender" links can't change it for you, so this is the first thing to check when a query
+that should work fails. In Sentinel, open the hunt's workspace under <strong>Microsoft Sentinel</strong>, then
+<strong>General › Logs</strong>, and switch the editor to <strong>KQL mode</strong>.</p>
+<p><strong>A query returns no rows, but the manual says it should.</strong> The portal's time picker is hiding them. The hunt logs
+were loaded on one day (TimeGenerated), so keep the <code>| where TimeGenerated &gt; ago(365d)</code> line that every manual
+query starts with, and filter the real event time on <code>Timestamp</code>. See <a href="#two-clocks">the two clocks</a>.</p></article></main>
   <footer>
     <nav aria-label="Method references"><a href="/knowledge/method">The hunt method</a><a href="/knowledge/kql-cookbook" aria-current="page">KQL cookbook</a><a href="/knowledge/log-tables">Log-table reference</a><a href="/knowledge/report-writing">Report writing</a><a href="/request">Request a hunt</a></nav>
     <span class="spacer"></span>

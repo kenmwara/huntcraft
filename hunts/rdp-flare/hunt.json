@@ -23,5 +23,28 @@
   ],
   "telemetry_note": "Rows carry two clocks: TimeGenerated = bulk load time (all ~2026-10-29 17:37), Timestamp/OriginalTime = the real event time (Sept 2025). Always hunt on Timestamp, not TimeGenerated.",
   "scenario": "An internet-facing Windows host is brute-forced over RDP; one account falls and the attacker logs in interactively. Post-access actions follow (to be worked flag by flag).",
-  "tenant_id": "939e93f3-04f6-479d-82ff-345c231abb4d"
+  "tenant_id": "939e93f3-04f6-479d-82ff-345c231abb4d",
+  "table_map": {
+    "RdpFlarePracticeLogon_CL": {
+      "defender": "DeviceLogonEvents",
+      "records": "sign-in attempts, success or failure",
+      "rows": 260
+    },
+    "RdpFlarePracticeProcess_CL": {
+      "defender": "DeviceProcessEvents",
+      "records": "programs started and their command lines",
+      "rows": 1799
+    },
+    "RdpFlarePracticeNetwork_CL": {
+      "defender": "DeviceNetworkEvents",
+      "records": "connections in and out",
+      "rows": 1377
+    },
+    "RdpFlarePracticeFile_CL": {
+      "defender": "DeviceFileEvents",
+      "records": "files created, changed, deleted",
+      "rows": 4768
+    }
+  },
+  "table_map_note": "Same columns as the real tables, except the lab adds OriginalTime and Campaign and leaves out SourceSystem."
 }

@@ -10,12 +10,13 @@ import markdown
 
 ROOT = pathlib.Path(__file__).parent
 sys.path.insert(0, str(ROOT / "tools"))
-from generate import defender_url, is_unordered, norm, shuffle_choices  # one rule shared with the generator
+from generate import defender_url, is_unordered, norm, project_gaps, shuffle_choices  # one rule shared with the generator
 
 HUNTS, SITE, KNOW = ROOT / "hunts", ROOT / "site", ROOT / "knowledge"
 REG = {e["slug"]: e for e in json.loads((HUNTS / "registry.json").read_text(encoding="utf-8"))}
 # what a member's page needs, nothing more (no internal notes, no subscription or resource group)
-META_KEYS = ("slug", "title", "points", "flag_count", "host", "tables", "tenant_id", "incident_window_utc")
+META_KEYS = ("slug", "title", "points", "flag_count", "host", "tables", "tenant_id", "incident_window_utc",
+             "table_map", "table_map_note")
 FREE = re.compile(r"sentence|reasoning", re.I)
 # Round 8 (Ken, 26 Nov): the hunt authors' credit, worded by them. One string for every page so it can't drift.
 HUNT_CREDIT = "Hunt content by SancLogic / the Cyber Range threat hunt team"
@@ -59,6 +60,8 @@ def build_hunt(d):
         o["defender_url"] = defender_url(o["query"], tid)
     reveals = {}
     for i, f in enumerate(guide.get("flags", [])):
+        for gap in project_gaps(f):   # member review 1: show the columns you filter on
+            print(f"lint {slug} {f['flag']}: {gap}")
         for st in f.get("steps", []):
             q = st.get("query") or ""
             if q.strip() and not q.strip().startswith("("):

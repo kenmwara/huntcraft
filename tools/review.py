@@ -43,7 +43,8 @@ def leaks_now(slug, guide):
     out, earlier = {}, []
     for f in guide.get("flags", []):
         hits, info = G.leak_report(f, earlier, ctx)
-        out[f["flag"]] = {"terms": hits, "fields": G.leak_fields(f, hits), "info": info}
+        # info only: project what you filter (member review 1)
+        out[f["flag"]] = {"terms": hits, "fields": G.leak_fields(f, hits), "info": list(info) + G.project_gaps(f)}
         earlier.append((f.get("reveal") or {}).get("answer"))
     return out
 

@@ -138,6 +138,15 @@ ol.stepper{list-style:none;margin:0;padding:0;counter-reset:s}
 .code pre .k{color:var(--code-key)} .code pre .p{color:var(--code-pipe)} .code pre .s{color:var(--code-str)}
 .hint{padding:10px 14px;border-radius:8px;background:var(--accent-soft);border:1px solid var(--line);font-size:14px}
 .hint p{margin:0 0 6px}.hint p:last-child{margin:0}
+.wserr{font-size:13px;color:var(--muted);margin:-4px 0 0}
+.sbody h4.part{font-size:15px;margin:6px 0 0}
+.shot{display:block;max-width:100%;width:auto;height:auto;border-radius:8px;border:1px solid var(--line)}
+.tmap{overflow-x:auto;margin:0 0 8px}
+.tmap table{border-collapse:collapse;font-size:13px;width:100%}
+.tmap th,.tmap td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tmap th{font-weight:600;color:var(--muted)}
+.tmap .num{text-align:right;font-variant-numeric:tabular-nums}
+.tmap code{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;word-break:break-all}
 .ans-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .ans-row input,.ans-row textarea{flex:1 1 260px;min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:8px 12px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:14px}
 .ans-row textarea{font-family:inherit;min-height:84px}
@@ -233,7 +242,7 @@ footer .credit{padding:10px 0}
   </footer>
 </div>
 
-<script src="data.js?v=79b515394d"></script>
+<script src="data.js?v=02d75e33ec"></script>
 <script>
 (function(){
   var $ = function(id){ return document.getElementById(id); };
@@ -329,7 +338,7 @@ footer .credit{padding:10px 0}
 
   // build the stepper item list for the current flag
   function items(){
-    if(cur<0){ var o=G.orientation||{}; return [{t:'Why start here',k:'why'},{t:'Set Defender to UTC',k:'tz'},{t:'Run this',k:'orient-q'}]; }
+    if(cur<0){ var o=G.orientation||{}; return [{t:'Why start here',k:'why'},{t:'Set up Defender',k:'tz'},{t:'Run this',k:'orient-q'}]; }
     var f=flags[cur], list=[{t:'Where to look',k:'where'}];
     (f.steps||[]).forEach(function(s,i){ list.push({t:(f.steps.length>1?'Step '+(i+1):'Work it out'),k:'step',i:i}); });
     list.push({t:'Submit your answer',k:'submit'});
@@ -342,7 +351,15 @@ footer .credit{padding:10px 0}
     return '<div class="code"><div class="cbar"><span class="lbl">KQL'+(ws?' · run in '+esc(ws):'')+'</span>'
       +(ws?'<button class="btn ghost ws-copy" type="button" data-copyws>Copy ID</button>':'')
       +'<button class="btn ghost" type="button" data-copy>Copy query</button>'
-      +(url?'<a class="btn primary" target="_blank" rel="noopener" href="'+esc(url)+'">Open in Defender ↗</a>':'')+'</div><pre>'+kql(q)+'</pre></div>';
+      +(url?'<a class="btn primary" target="_blank" rel="noopener" href="'+esc(url)+'">Open in Defender ↗</a>':'')+'</div><pre>'+kql(q)+'</pre></div>'
+      +'<p class="wserr">Got "Failed to resolve table…"? You\'re in the wrong workspace. <button class="inlink" type="button" data-gotz>How to check →</button></p>';
+  }
+  // practice table -> the real Defender table (hunt.json table_map), shown under the orientation results
+  function tableMap(){
+    var tm=M.table_map; if(!tm) return '';
+    var rows=Object.keys(tm).map(function(k){ var r=tm[k]; return '<tr><td><code>'+esc(k)+'</code></td><td><code>'+esc(r.defender)+'</code></td><td>'+esc(r.records)+'</td><td class="num">'+Number(r.rows).toLocaleString('en-US')+'</td></tr>'; }).join('');
+    return '<div class="tmap"><table><thead><tr><th scope="col">In this lab</th><th scope="col">In a real Defender tenant</th><th scope="col">What it records</th><th scope="col" class="num">Rows here</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<p>Same columns, practice copy: everything you learn here works on the real tables.'+(M.table_map_note?' ('+esc(M.table_map_note)+')':'')+' See the <a href="/knowledge/log-tables#range-cl-tables">Log-table reference</a>.</p>';
   }
   function hintBox(id,look,obs){
     return (look||obs)?'<div class="hint" id="'+id+'" hidden data-look="'+esc(look||'')+'" data-obs="'+esc(obs||'')+'"></div>':'';
@@ -356,7 +373,14 @@ footer .credit{padding:10px 0}
   function bodyFor(it){
     if(it.k==='why'){ var o=G.orientation; return '<p>'+esc(o.why)+'</p><button class="btn primary" type="button" data-next>Next</button>'; }
     if(it.k==='tz'){ var tzUrl='https://security.microsoft.com/security-settings2'+(M.tenant_id?'?tid='+M.tenant_id:'');
-      return '<p><strong>Why:</strong> every time in this manual, and every time typed inside a query (like <code>datetime(2025-09-16 19:40)</code>), is UTC. Defender shows results in your <em>local</em> time unless you tell it otherwise. For example, Vancouver shows UTC -07:00, so an event at 19:40 UTC appears as 12:40 on screen, and the times you are told to look for never line up with the rows you see. Queries still run in UTC either way; only what you read is shifted.</p>'
+      var wsn=esc((M.workspace||{}).name||'the hunt workspace');
+      return '<h4 class="part">1. Check the workspace</h4>'
+        +'<p>Every query here only works in <strong>'+wsn+'</strong>: the hunt tables exist nowhere else, so in any other workspace the query fails with <em>Failed to resolve table</em>.</p>'
+        +'<p><strong>In Defender:</strong> on the Advanced hunting page, look at the top right, level with the page title. It should read <strong>Selected workspace: '+wsn+'</strong>. If it shows another workspace, click it, pick '+wsn+' in the <strong>Workspace scope</strong> panel, then <strong>Apply</strong>. Defender remembers your choice, so check it again whenever a query fails.</p>'
+        +'<picture><source media="(max-width:600px)" srcset="/img/defender-workspace-sm.png" width="350" height="130"><img class="shot" src="/img/defender-workspace.png" width="760" height="179" alt="Defender Advanced hunting header: at the top right, level with the page title, the label reads Selected workspace: '+wsn+'. Click it to switch." loading="lazy"></picture>'
+        +'<p><strong>If you use Sentinel instead:</strong> in the Azure portal open <strong>Microsoft Sentinel</strong>, click <strong>'+wsn+'</strong>, then <strong>General</strong> › <strong>Logs</strong>. Under the page title it should read <strong>Selected workspace: \''+esc(((M.workspace||{}).name||'').toLowerCase())+'\'</strong>. Logs opens in Simple mode: switch the drop-down at the top right to <strong>KQL mode</strong> to paste a query.</p>'
+        +'<h4 class="part">2. Set the time zone to UTC</h4>'
+        +'<p><strong>Why:</strong> every time in this manual, and every time typed inside a query (like <code>datetime(2025-09-16 19:40)</code>), is UTC. Defender shows results in your <em>local</em> time unless you tell it otherwise. For example, Vancouver shows UTC -07:00, so an event at 19:40 UTC appears as 12:40 on screen, and the times you are told to look for never line up with the rows you see. Queries still run in UTC either way; only what you read is shifted.</p>'
         +'<p><strong>To what:</strong> UTC. Not your city, not "Local".</p>'
         +'<p><strong>How (one time, about 20 seconds):</strong></p><ol class="tzsteps">'
         +'<li>Open <a href="'+tzUrl+'" target="_blank" rel="noopener">Defender time zone settings ↗</a>. The long way: in Defender\'s left menu choose <strong>Settings</strong>, then <strong>Microsoft Defender portal</strong>. (Not the gear icon at the top right: that panel is themes and your account.)</li>'
@@ -365,8 +389,8 @@ footer .credit{padding:10px 0}
         +'<li>Refresh any open Defender tab (F5). Defender itself says the change may not show until you do.</li></ol>'
         +'<p><strong>Check it worked:</strong> run the next step\'s query. On the Logon row, <strong>FirstEvent</strong> should read 16 Sep 2025 at <strong>18:34</strong> (6:34 PM). If it shows any other hour, Defender is still on your local time.</p>'
         +'<p class="mitre">The setting covers incidents, investigations and advanced hunting in your account only. Switch it back the same way (pick Local) whenever you like; real-world shifts usually stay on UTC, because every log source and every teammate agrees on it.</p>'
-        +'<button class="btn primary" type="button" data-next>Done, it says UTC</button>'; }
-    if(it.k==='orient-q'){ var o2=G.orientation, wsn=esc((M.workspace||{}).name||'the hunt workspace'); return '<p>'+esc(o2.do)+'</p>'+'<p><strong>First, check your workspace.</strong> In Defender\'s Advanced hunting, the top right of the query editor reads <strong>Selected workspace: '+wsn+'</strong>. If it names a different workspace, switch it to '+wsn+' before you run anything: the hunt tables only exist there, so in any other workspace the query fails. In Microsoft Sentinel, pick '+wsn+' and open <strong>Logs</strong>.</p>'+codeBlock(o2.query,o2.defender_url)
+        +'<button class="btn primary" type="button" data-next>Done: right workspace, time in UTC</button>'; }
+    if(it.k==='orient-q'){ var o2=G.orientation; return '<p>'+esc(o2.do)+'</p>'+codeBlock(o2.query,o2.defender_url)
       +actions('h-orient',o2.look_for,'','<button class="btn primary" type="button" data-goflag="0">I ran it, start the first flag</button>'); }
     var f=flags[cur];
     if(it.k==='where'){ var w=f.where_to_look||{};
@@ -430,7 +454,7 @@ footer .credit{padding:10px 0}
     root.querySelectorAll('[data-hint]').forEach(function(b){ b.onclick=function(){
       var box=$(b.getAttribute('aria-controls')), open=b.getAttribute('aria-expanded')==='true';
       if(!open && !box.innerHTML){ var lk=box.getAttribute('data-look'), ob=box.getAttribute('data-obs');
-        box.innerHTML=(lk?'<p>'+esc(lk)+'</p>':'')+(ob?'<p>'+esc(ob)+'</p>':''); }
+        box.innerHTML=(lk?'<p>'+esc(lk)+'</p>':'')+(box.id==='h-orient'?tableMap():'')+(ob?'<p>'+esc(ob)+'</p>':''); }
       box.hidden=open; b.setAttribute('aria-expanded',String(!open)); b.textContent=open?'What am I looking for?':'Hide the hint'; }; });
     root.querySelectorAll('[data-gotz]').forEach(function(b){ b.onclick=function(){ go(-1,1); }; });
     var chk=root.querySelector('[data-check]'), rev=root.querySelector('[data-reveal]'), lock=root.querySelector('[data-lock]');

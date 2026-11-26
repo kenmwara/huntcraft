@@ -155,3 +155,18 @@ DeviceProcessEvents | where FileName == "<payload>.exe"
 
 **Rule of thumb:** filter by **time** and **host** first (cheap, shrinks the data), then by behaviour, then
 `project` down to the columns you'll read. A query you can't read in one glance is too wide.
+
+## Common errors {#common-errors}
+
+**`Failed to resolve table expression named 'RdpFlarePractice*_CL'`** (or "Failed to resolve table…" with any
+table name). You're in the wrong workspace: the table exists, just not in the one your editor is pointed at.
+In Defender's Advanced hunting, look at the top right of the page, level with the title: it should read
+**Selected workspace:** followed by the hunt's workspace (for RDP-Flare, `LAW-HuntPractice`). If it shows another
+one, click it, pick the right workspace in the **Workspace scope** panel, then **Apply**. Defender remembers the
+choice, and "Open in Defender" links can't change it for you, so this is the first thing to check when a query
+that should work fails. In Sentinel, open the hunt's workspace under **Microsoft Sentinel**, then
+**General › Logs**, and switch the editor to **KQL mode**.
+
+**A query returns no rows, but the manual says it should.** The portal's time picker is hiding them. The hunt logs
+were loaded on one day (TimeGenerated), so keep the `| where TimeGenerated > ago(365d)` line that every manual
+query starts with, and filter the real event time on `Timestamp`. See [the two clocks](#two-clocks).

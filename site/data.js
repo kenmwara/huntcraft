@@ -17,6 +17,29 @@ window.HUNTS = [
     "start": "2025-09-16T18:34:00Z",
     "end": "2025-09-18T23:56:00Z"
    },
+   "table_map": {
+    "RdpFlarePracticeLogon_CL": {
+     "defender": "DeviceLogonEvents",
+     "records": "sign-in attempts, success or failure",
+     "rows": 260
+    },
+    "RdpFlarePracticeProcess_CL": {
+     "defender": "DeviceProcessEvents",
+     "records": "programs started and their command lines",
+     "rows": 1799
+    },
+    "RdpFlarePracticeNetwork_CL": {
+     "defender": "DeviceNetworkEvents",
+     "records": "connections in and out",
+     "rows": 1377
+    },
+    "RdpFlarePracticeFile_CL": {
+     "defender": "DeviceFileEvents",
+     "records": "files created, changed, deleted",
+     "rows": 4768
+    }
+   },
+   "table_map_note": "Same columns as the real tables, except the lab adds OriginalTime and Campaign and leaves out SourceSystem.",
    "workspace": {
     "name": "LAW-HuntPractice",
     "guid": "ee718ed3-9e76-4b9d-a7b5-3500446fe4f4"
@@ -34,7 +57,7 @@ window.HUNTS = [
     "why": "You never start by querying for the answer. You start by learning the ground: which tables hold data, over what time window, and for which host. Thirty seconds here saves you from guessing later.",
     "do": "Run this. It tells you what telemetry exists and how much.",
     "query": "union withsource=T RdpFlarePractice*_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| summarize Events=count(), FirstEvent=min(Timestamp), LastEvent=max(Timestamp), LoadedAt=max(TimeGenerated), Hosts=make_set(DeviceName) by T",
-    "look_for": "4 rows, one per table: Logon (260 events), Process (1,799), Network (1,377) and File (4,768), all from one host, slflarewinsysmo. These are the lab's copies of the Defender tables you will meet at work: RdpFlarePracticeLogon_CL is DeviceLogonEvents, RdpFlarePracticeProcess_CL is DeviceProcessEvents, RdpFlarePracticeNetwork_CL is DeviceNetworkEvents and RdpFlarePracticeFile_CL is DeviceFileEvents (same columns, a different name). Now compare the two clocks. FirstEvent and LastEvent come from Timestamp, the real event time: 16 to 18 Sep 2025. LoadedAt comes from TimeGenerated: 29 Oct 2026 on every table, the day the lab loaded the logs. That is why every query here filters and sorts on Timestamp.",
+    "look_for": "4 rows, one per table, all from one host, slflarewinsysmo (the table below names each one). Now compare the two clocks. FirstEvent and LastEvent come from Timestamp, the real event time: 16 to 18 Sep 2025. LoadedAt comes from TimeGenerated: 29 Oct 2026 on every table, the day the lab loaded the logs. That is why every query here filters and sorts on Timestamp.",
     "gotcha": "Every row's TimeGenerated is the same (the moment the lab loaded the logs, 29 Oct 2026). The REAL attack time is in the Timestamp column, so sort and filter on Timestamp. Each query starts with a TimeGenerated line so the portal's time picker (Defender defaults to 7 days) can't hide the rows. Every time in this manual is UTC, but Defender shows your local time until you switch it, so set Defender to UTC before you start.",
     "defender_url": "https://security.microsoft.com/v2/advanced-hunting?query=H4sIAAAAAAACCn2SS0vEMBSFz9pfkWUVwYXoRiqIOroYRMT9EJ1gi7Ydms74wB%2Fvl9uMI4wMIW3uufec%2B0iWalWr4%2Bv0zmlQpYi9VK9nBZV6xPOguRaa6E0ePOier8c%2FwEhRB5rpUlPt6dt0KrAU52DXajjdsFtDPayAntM52%2BuFbIWOdaoT0H0wpyOWI1uHN5riWi9hnrhRYay7M2UH4vWps9zJ3DI66yhkrAXtODnrceNbYPVYHn1nXTUZT%2F29WnbHyaPQEjtgVTnHWqXJ3Udm17DSpGp9WcS1VlbNgLdEJ803WQX9HuKfENnjG%2F5ElmikiovfGUarsKGqkTXF2uZ4fezkbOZ38S9j%2B6ZG5i3MmDtInDSVGVawPq74r%2FJruLOMwe7yiRtJr%2BAHvOIAAGgCAAA%3D&timeRangeId=month&tid=939e93f3-04f6-479d-82ff-345c231abb4d"
    },
@@ -45,9 +68,9 @@ window.HUNTS = [
      "points": 75,
      "objective": "Several external IPs have been hammering this box's RDP. Find the one that failed a lot and then actually got in.",
      "where_to_look": {
-      "decision": "Go to the Logon table (RdpFlarePracticeLogon_CL).",
+      "decision": "Go to the Logon table (RdpFlarePracticeLogon_CL, DeviceLogonEvents in a real tenant).",
       "why_here": "A break-in is an authentication event: who signed in, from where, success or failure. That is logon telemetry. It is not in the Process table (that is what ran AFTER access) or the Network table (connections, not logons). The hunt briefing itself points you here, which is a good habit: read what the hunt hands you.",
-      "why_not_others": "You could jump straight to Process to find malware, but you would be guessing which host activity is the attacker before you even know which account they used. Establish the entry first; everything else pivots off it."
+      "why_not_others": "You could jump straight to Process to find malware, but you would be guessing which host activity is the attacker before you even know which account they used. Establish the entry first; everything else pivots off it. Keep those two in mind: Network shows the repeated attempts, and Process shows what happened after the break-in. You'll need both soon."
      },
      "steps": [
       {
@@ -60,11 +83,11 @@ window.HUNTS = [
       },
       {
        "think": "You have probably already spotted it. Confirm it the strict way: show only the successful RemoteInteractive (real RDP) logons from an external address. If one IP and one account survive this filter, that is your break-in.",
-       "query": "RdpFlarePracticeLogon_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where LogonType == \"RemoteInteractive\" and ActionType == \"LogonSuccess\"\n| where RemoteIP !startswith \"10.\" and RemoteIP !startswith \"192.168.\"\n| project Timestamp, ActionType, RemoteIP, AccountName\n| order by Timestamp asc",
+       "query": "RdpFlarePracticeLogon_CL\n| where TimeGenerated > ago(365d)  // logs were loaded on one day; widen the window so the portal time picker cannot hide them\n| where LogonType == \"RemoteInteractive\" and ActionType == \"LogonSuccess\"\n| where RemoteIP !startswith \"10.\" and RemoteIP !startswith \"192.168.\"\n| project Timestamp, RemoteIP, AccountName, ActionType, LogonType\n| order by Timestamp asc",
        "run_it": "Run it.",
-       "look_for": "3 rows, each with ActionType LogonSuccess (the filter kept only the logons that worked). Two have an empty RemoteIP (sessions on the box itself); only one carries an external address. Note that row's address and its time. That time should read 18:43 on 16 Sep 2025; if it shows any other hour, Defender is still on your local time (Get your bearings, step 2).",
+       "look_for": "3 rows, each with ActionType LogonSuccess and LogonType RemoteInteractive (the filter kept only real RDP logons that worked). Two have an empty RemoteIP (sessions on the box itself); only one carries an external address. Note that row's address and its time. That time should read 18:43 on 16 Sep 2025; if it shows any other hour, Defender is still on your local time (Get your bearings, step 2).",
        "observe": "This is the moment of the break-in. You are now looking straight at the attacker's source address. You found it by reasoning, not by being told.",
-       "defender_url": "https://security.microsoft.com/v2/advanced-hunting?query=H4sIAAAAAAACCpWSW0vDQBCFz7O%2FYs2TQlGrKIooiKAIIqX2XdY22Kq50KSK4I%2F3m0lCLcQHWTbsnDlz5paxZip1o3dFLZVqxDdqqloLvqnuVeiFm%2BtJ11hb%2BlbQp%2Bb4jB80gZnxuuXmjkaiU3SDLrnR43d0pBMdg%2B6CBe1zAllNvXLFTs%2BwCK9RsMzN13wzPF86d%2F7COeatvZoGy0ELXgHV4pevxFpiRfSDd5e1uPX55tkDr4hCDrfGmrc5OpWsp%2Fv1fCZUVjp2wQlKNPaYwqdxB6Nup9NM9wMr8fnk3ulVi%2FdrrfM8agXTdlNxkp6aNvOOQLZh1r7hmpfNyToy3aEOtLdRx%2F%2Biz3RI%2FJDdnrpOU00Jt9ArClOfZPePNDoZ%2FsEfHQ96Kui4U7CVz%2FHBVdI2m2121m7wGZ2%2BfNZfhcIPLry%2BGfACAAA%3D&timeRangeId=month&tid=939e93f3-04f6-479d-82ff-345c231abb4d"
+       "defender_url": "https://security.microsoft.com/v2/advanced-hunting?query=H4sIAAAAAAACCpVSXUvEMBCcZ39F7JNCUU9RFFEQQRFEjvPeJbbFO7VJueYUwR%2Fv7Ca98yQvElKys7OzX52gRocbvMNigQZjfi0qBMz5bXAPjxdehydc09rCNww%2BMaNP%2BAZTMlu%2BbnmdopbRDXUNLnmtxu%2FgCCc4JrpLzGCfxzCrqPeqOOgJZsmLCpI5fsVX0%2FOFc%2BXPlSPeoNVEzBH1fBmq%2Bl%2B%2BjtaClqW%2B0e7ahEufb5rd8GWp4MgNtGYpx6DSZrpfz2fKyjrFLngMCkw0xus07sgIaTpxuh%2B0Cp2P006vEp7XWud5xJJM2U3PU2Rq2sw7JrJNZtANB75kTtKR6I5wgL2NOv4XfYZDxo%2B421PVidV05Hq8UqHSSQ7%2FSNRp6S8zmco0hYrYUuf1oOxm5fk7nzK7gViD7LtOe32mJ1eFdN1T9wet0rv5BgMAAA%3D%3D&timeRangeId=month&tid=939e93f3-04f6-479d-82ff-345c231abb4d"
       }
      ],
      "reveal": {
@@ -84,7 +107,7 @@ window.HUNTS = [
      "points": 50,
      "objective": "Name the real account the attacker signed in with.",
      "where_to_look": {
-      "decision": "Same Logon table, but now you have a lever: the attacker IP from Q1.",
+      "decision": "Same Logon table (DeviceLogonEvents in a real tenant), but now you have a lever: the attacker IP from Q1.",
       "why_here": "You are not searching blind any more. The account is simply whoever that IP successfully logged in as. This is the heart of pivoting: an answer you already have (the IP) becomes the filter for the next one.",
       "why_not_others": "You do not need a new data source. Beginners often go hunting somewhere new for each flag; the efficient move is to re-use what you already proved."
      },
@@ -150,7 +173,7 @@ window.HUNTS = [
      "points": 75,
      "objective": "About an hour after getting in, the attacker ran the real payload (not the calc.exe decoy). Name the binary.",
      "where_to_look": {
-      "decision": "Go to the Process table (RdpFlarePracticeProcess_CL).",
+      "decision": "Go to the Process table (RdpFlarePracticeProcess_CL, DeviceProcessEvents in a real tenant).",
       "why_here": "'What ran' is literally a process-creation event. Now that you know the account (slflare) from Section 1, you follow that account's activity here.",
       "why_not_others": "Logon got the attacker in; it cannot tell you what they executed. That is a different table, and the pivot is the account you already proved."
      },
@@ -181,7 +204,7 @@ window.HUNTS = [
      "points": 75,
      "objective": "Get the exact command line that launched the payload, full path and arguments.",
      "where_to_look": {
-      "decision": "Same Process table, now zoomed to that single process.",
+      "decision": "Same Process table (DeviceProcessEvents in a real tenant), now zoomed to that single process.",
       "why_here": "The ProcessCommandLine field holds the literal invocation, exactly as it was typed/scripted.",
       "why_not_others": "Nothing new to find; you are reading one field off the row you already located."
      },
@@ -212,7 +235,7 @@ window.HUNTS = [
      "points": 125,
      "objective": "The attacker did not want to re-break-in every time. They registered something to survive a reboot. Name it (and do not assume it is a scheduled task).",
      "where_to_look": {
-      "decision": "Back to the Process table.",
+      "decision": "Back to the Process table (DeviceProcessEvents in a real tenant).",
       "why_here": "Persistence is SET UP by running a command: sc create (a service), schtasks (a task), reg add (a run key), net user (an account). This hunt has no Registry table, so the command that created the persistence is your evidence, and it lives in Process.",
       "why_not_others": "You might reach for a dedicated persistence or registry table. You do not have one here, so hunt the command instead of the artefact."
      },
@@ -243,7 +266,7 @@ window.HUNTS = [
      "points": 75,
      "objective": "Right after persistence, the attacker ran a burst of discovery commands. Name the two that are about the HOST itself: basic fingerprinting, not network and not accounts.",
      "where_to_look": {
-      "decision": "Process table, the burst of commands just after the persistence step.",
+      "decision": "Process table (DeviceProcessEvents in a real tenant), the burst of commands just after the persistence step.",
       "why_here": "Discovery is the attacker running built-in commands to learn the box. Those are process executions.",
       "why_not_others": "No new source needed; you are reading the same account's activity in a tight time window."
      },
@@ -276,7 +299,7 @@ window.HUNTS = [
      "points": 75,
      "objective": "Something got zipped up and staged locally, in the attacker's temp directory, with a name made to look routine. Name the archive.",
      "where_to_look": {
-      "decision": "Go to the File table (RdpFlarePracticeFile_CL).",
+      "decision": "Go to the File table (RdpFlarePracticeFile_CL, DeviceFileEvents in a real tenant).",
       "why_here": "An archive being created is a file event: a new .zip appearing on disk. The File table shows the artefact directly, with the path and the process that made it.",
       "why_not_others": "You could grep Process for a zip command, but the File table hands you the file itself, which is cleaner."
      },
@@ -307,7 +330,7 @@ window.HUNTS = [
      "points": 100,
      "objective": "The payload you found in the Execution section (msupdate.exe) did not run in a vacuum. It called out somewhere. Give that destination.",
      "where_to_look": {
-      "decision": "Go to the Network table (RdpFlarePracticeNetwork_CL).",
+      "decision": "Go to the Network table (RdpFlarePracticeNetwork_CL, DeviceNetworkEvents in a real tenant).",
       "why_here": "A callout is an outbound network connection. The flag ties it to a specific process, so filter the network events by that initiating process rather than reading them all.",
       "why_not_others": "The box talks to many Microsoft endpoints; filtering by the process that made the connection is what keeps you from blaming legitimate traffic."
      },
@@ -338,7 +361,7 @@ window.HUNTS = [
      "points": 100,
      "objective": "After staging the archive, the session tried to send it somewhere external. Give the destination as IP:Port. It does not matter that the attempt failed; they want where the attacker aimed.",
      "where_to_look": {
-      "decision": "Network table again, around the collection time, looking for a failed outbound.",
+      "decision": "Network table again (DeviceNetworkEvents in a real tenant), around the collection time, looking for a failed outbound.",
       "why_here": "Exfiltration is an outbound connection carrying the data out. A failed attempt still leaves a ConnectionFailed row.",
       "why_not_others": "Same table as C2, but a different moment (just after the archive was staged) and you care about the port, not just the IP."
      },
@@ -393,4 +416,4 @@ window.HUNTS = [
   }
  }
 ];
-window.HC_VER = "79b515394d";
+window.HC_VER = "02d75e33ec";
